@@ -1,3 +1,5 @@
+const htmlparser2 = require('htmlparser2');
+
 export class Parse {
 	constructor(options) {
 		this.root = null;

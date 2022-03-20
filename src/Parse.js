@@ -21,7 +21,7 @@ export class Parse {
 	}
 
 	find(target, root = this.root) {
-		return this.transverse(root).filter(type => type === target);
+		return this.transverse(root).filter(node => node.type === target);
 	}
 
 	transverse(root) {
@@ -31,7 +31,7 @@ export class Parse {
 		while (stack.length) {
 			let node = stack.pop();
 
-			if (node && !node.type) {
+			if (!node || !node.type) {
 				continue;
 			}
 
@@ -40,8 +40,7 @@ export class Parse {
 			}
 
 			this.seen.add(node);
-
-			elements.push(node.type);
+			elements.push(node);
 
 			if (node.prev) {
 				stack.push(this.transversePrev(node.prev));
@@ -51,7 +50,7 @@ export class Parse {
 				stack.push(this.transverseNext(node.next));
 			}
 
-			for (const key in node.children) {
+			for (let key in node.children) {
 				stack.push(node.children[key]);
 			}
 		}
@@ -60,10 +59,6 @@ export class Parse {
 	}
 
 	transversePrev(element) {
-		if (!element) {
-			return element;
-		}
-
 		let neighbors = [];
 
 		while (element.prev) {
@@ -75,10 +70,6 @@ export class Parse {
 	}
 
 	transverseNext(element) {
-		if (!element) {
-			return element;
-		}
-
 		let neighbors = [];
 
 		while (element.next) {

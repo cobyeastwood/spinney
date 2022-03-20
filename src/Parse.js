@@ -47,10 +47,6 @@ export class Parse {
 		while (stack.length) {
 			let node = stack.pop();
 
-			if (!node || !node.type) {
-				continue;
-			}
-
 			if (this.seen.has(node)) {
 				continue;
 			}
@@ -59,11 +55,11 @@ export class Parse {
 			elements.push(node);
 
 			if (node.prev) {
-				stack.push(this.transversePrev(node.prev));
+				stack.push(node.prev);
 			}
 
 			if (node.next) {
-				stack.push(this.transverseNext(node.next));
+				stack.push(node.next);
 			}
 
 			for (let key in node.children) {
@@ -72,27 +68,5 @@ export class Parse {
 		}
 
 		return elements;
-	}
-
-	transversePrev(element) {
-		let neighbors = [];
-
-		while (element.prev) {
-			neighbors.push(element);
-			element = element.prev;
-		}
-
-		return neighbors;
-	}
-
-	transverseNext(element) {
-		let neighbors = [];
-
-		while (element.next) {
-			neighbors.push(element);
-			element = element.next;
-		}
-
-		return neighbors;
 	}
 }

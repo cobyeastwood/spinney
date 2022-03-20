@@ -22,7 +22,7 @@ export class Parse {
 
 	find(target, root = this.root) {
 		if (typeof target !== 'string') {
-			throw new Error('target parameter must be of type string');
+			throw new Error('parameter target must be of type string');
 		}
 
 		const targetLowerCased = target.toLowerCase();
@@ -40,7 +40,11 @@ export class Parse {
 		});
 	}
 
-	transverse(root) {
+	transverse(root = this.root) {
+		if (root === null) {
+			return [];
+		}
+
 		let elements = [];
 		let stack = [root];
 

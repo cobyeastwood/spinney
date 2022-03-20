@@ -68,7 +68,7 @@ export class Parse {
 
 	find(data, root = this.root) {
 		if (!root) {
-			return [];
+			return this;
 		}
 
 		const values = this.memoify(data);

@@ -9,7 +9,7 @@ export class Parse {
 	}
 
 	setUp({ data, options }) {
-		if (typeof Buffer != 'undefined' && Buffer.isBuffer(data)) {
+		if (typeof Buffer !== 'undefined' && Buffer.isBuffer(data)) {
 			data = data.toString();
 		}
 

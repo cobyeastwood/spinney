@@ -1,4 +1,4 @@
-const htmlparser2 = require('htmlparser2');
+import htmlparser2 from 'htmlparser2';
 
 export class Parse {
 	constructor(options) {
@@ -21,7 +21,23 @@ export class Parse {
 	}
 
 	find(target, root = this.root) {
-		return this.transverse(root).filter(node => node.type === target);
+		if (typeof target !== 'string') {
+			throw new Error('target parameter must be of type string');
+		}
+
+		const targetLowerCased = target.toLowerCase();
+
+		return this.transverse(root).filter(node => {
+			if (node?.attribs?.href) {
+				return node.attribs.href.includes(targetLowerCased);
+			}
+
+			if (node?.data) {
+				return node.data.toLowerCase().includes(targetLowerCased);
+			}
+
+			return false;
+		});
 	}
 
 	transverse(root) {

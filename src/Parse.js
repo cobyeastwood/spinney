@@ -1,11 +1,12 @@
 import htmlparser2 from 'htmlparser2';
+import { Iterable } from 'Iterable';
 
 export class Parse {
 	constructor(options) {
 		this.root = null;
 		this.seen = new Set();
 
-		this.elements = [];
+		this.memoize = {};
 		this.adjacency = new Map();
 
 		this.setUp(options);
@@ -18,7 +19,6 @@ export class Parse {
 
 		if (typeof data === 'string') {
 			this.root = htmlparser2.parseDocument(data, options);
-			this.transverse(this.root);
 		}
 	}
 
@@ -26,48 +26,52 @@ export class Parse {
 		return this.adjacency;
 	}
 
-	find(target) {
-		if (typeof target !== 'string') {
-			throw new Error('parameter target must be of type string');
-		}
-
-		if (this.adjacency.has(target)) {
-			return this;
-		}
-
-		const targetLowerCased = target.toLowerCase();
-
-		const matches = this.elements.filter(node => {
-			if (node?.attribs?.href) {
-				return node.attribs.href.includes(targetLowerCased);
-			}
-
-			if (node?.data) {
-				return node.data.toLowerCase().includes(targetLowerCased);
-			}
-
+	has(node, target) {
+		if (!node) {
 			return false;
+		}
+
+		if (node?.attribs?.href) {
+			return node.attribs.href.includes(this.memoize[target]);
+		}
+
+		if (node?.data) {
+			return node.data.toLowerCase().includes(this.memoize[target]);
+		}
+
+		return false;
+	}
+
+	arrayify(data) {
+		return Array.isArray(data) ? data : [data];
+	}
+
+	iterify(data) {
+		return new Iterable(data);
+	}
+
+	memoify(data) {
+		const array = this.arrayify(data);
+
+		array.forEach(value => {
+			if (typeof value !== 'string') {
+				throw new Error('parameter value must be of type string');
+			}
+
+			if (this.memoize[value] === undefined) {
+				this.memoize[value] = value.toLowerCase();
+			}
 		});
 
-		this.adjacency.set(target, matches);
-
-		return this;
+		return array;
 	}
 
-	findByArray(targetArray) {
-		if (!Array.isArray(targetArray)) {
-			throw new Error('parameter targetArray must be an Array');
-		}
-
-		targetArray.forEach(target => this.find(target));
-
-		return this;
-	}
-
-	transverse(root = this.root) {
+	find(target, root = this.root) {
 		if (!root) {
 			return [];
 		}
+
+		const targets = this.memoify(target);
 
 		let stack = [root];
 
@@ -83,7 +87,16 @@ export class Parse {
 			}
 
 			this.seen.add(node);
-			this.elements.push(node);
+
+			for (let target of this.iterify(targets)) {
+				if (this.has(node, target)) {
+					if (this.adjacency.has(target)) {
+						this.adjacency.set(target, this.adjacency.get(target).concat(node));
+					} else {
+						this.adjacency.set(target, [node]);
+					}
+				}
+			}
 
 			if (node.prev) {
 				stack.push(node.prev);

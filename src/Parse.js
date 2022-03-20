@@ -31,6 +31,10 @@ export class Parse {
 			throw new Error('parameter target must be of type string');
 		}
 
+		if (this.adjacency.has(target)) {
+			return this;
+		}
+
 		const targetLowerCased = target.toLowerCase();
 
 		const matches = this.elements.filter(node => {
@@ -45,11 +49,7 @@ export class Parse {
 			return false;
 		});
 
-		if (this.adjacency.has(target)) {
-			this.adjacency.set(target, this.adjacency.get(target).concat(matches));
-		} else {
-			this.adjacency.set(target, matches);
-		}
+		this.adjacency.set(target, matches);
 
 		return this;
 	}

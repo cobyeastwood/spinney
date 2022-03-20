@@ -41,7 +41,7 @@ export class Parse {
 	}
 
 	transverse(root = this.root) {
-		if (root === null) {
+		if (!root) {
 			return [];
 		}
 
@@ -50,6 +50,10 @@ export class Parse {
 
 		while (stack.length) {
 			let node = stack.pop();
+
+			if (!node) {
+				continue;
+			}
 
 			if (this.seen.has(node)) {
 				continue;
@@ -66,8 +70,10 @@ export class Parse {
 				stack.push(node.next);
 			}
 
-			for (let key in node.children) {
-				stack.push(node.children[key]);
+			if (node.children) {
+				for (let key in node.children) {
+					stack.push(node.children[key]);
+				}
 			}
 		}
 

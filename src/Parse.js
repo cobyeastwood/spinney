@@ -54,6 +54,16 @@ export class Parse {
 		return this;
 	}
 
+	findByArray(targetArray) {
+		if (!Array.isArray(targetArray)) {
+			throw new Error('parameter targetArray must be an Array');
+		}
+
+		targetArray.forEach(target => this.find(target));
+
+		return this;
+	}
+
 	transverse(root = this.root) {
 		if (!root) {
 			return [];

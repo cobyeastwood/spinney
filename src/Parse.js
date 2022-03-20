@@ -10,7 +10,7 @@ export class Parse {
 
 	setUp({ data, options }) {
 		if (typeof Buffer != 'undefined' && Buffer.isBuffer(data)) {
-			this.root = data.toString();
+			this.root = htmlparser2.parseDocument(data.toString(), options);
 			return;
 		}
 

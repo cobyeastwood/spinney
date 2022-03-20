@@ -56,11 +56,11 @@ export class Parse {
 		}
 
 		if (node?.attribs?.href) {
-			return node.attribs.href.includes(this.memoize[value]);
+			return node.attribs.href.includes(value);
 		}
 
 		if (node?.data) {
-			return node.data.toLowerCase().includes(this.memoize[value]);
+			return node.data.toLowerCase().includes(value);
 		}
 
 		return false;
@@ -89,7 +89,7 @@ export class Parse {
 			this.seen.add(node);
 
 			for (let value of values) {
-				if (this.has(node, value)) {
+				if (this.memoize[value] && this.has(node, this.memoize[value])) {
 					if (this.adjacency.has(value)) {
 						this.adjacency.set(value, this.adjacency.get(value).concat(node));
 					} else {

@@ -5,6 +5,9 @@ export class Parse {
 		this.root = null;
 		this.seen = new Set();
 
+		this.elements = [];
+		this.adjacency = new Map();
+
 		this.setUp(options);
 	}
 
@@ -15,17 +18,22 @@ export class Parse {
 
 		if (typeof data === 'string') {
 			this.root = htmlparser2.parseDocument(data, options);
+			this.transverse(this.root);
 		}
 	}
 
-	find(target, root = this.root) {
+	getAdjacency() {
+		return this.adjacency;
+	}
+
+	find(target) {
 		if (typeof target !== 'string') {
 			throw new Error('parameter target must be of type string');
 		}
 
 		const targetLowerCased = target.toLowerCase();
 
-		return this.transverse(root).filter(node => {
+		const matches = this.elements.filter(node => {
 			if (node?.attribs?.href) {
 				return node.attribs.href.includes(targetLowerCased);
 			}
@@ -36,6 +44,14 @@ export class Parse {
 
 			return false;
 		});
+
+		if (this.adjacency.has(target)) {
+			this.adjacency.set(target, this.adjacency.get(target).concat(matches));
+		} else {
+			this.adjacency.set(target, matches);
+		}
+
+		return this;
 	}
 
 	transverse(root = this.root) {
@@ -43,7 +59,6 @@ export class Parse {
 			return [];
 		}
 
-		let elements = [];
 		let stack = [root];
 
 		while (stack.length) {
@@ -58,7 +73,7 @@ export class Parse {
 			}
 
 			this.seen.add(node);
-			elements.push(node);
+			this.elements.push(node);
 
 			if (node.prev) {
 				stack.push(node.prev);
@@ -75,6 +90,6 @@ export class Parse {
 			}
 		}
 
-		return elements;
+		return this;
 	}
 }

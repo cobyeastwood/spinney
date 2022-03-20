@@ -1,7 +1,7 @@
 import htmlparser2 from 'htmlparser2';
 import { Iterable } from 'Iterable';
 
-class Parse {
+export class Parse {
 	constructor(options) {
 		this.root = null;
 		this.seen = new Set();
@@ -10,6 +10,34 @@ class Parse {
 		this.adjacency = new Map();
 
 		this.setUp(options);
+	}
+
+	get nodes() {
+		return this.adjacency;
+	}
+
+	arrayify(data) {
+		return Array.isArray(data) ? data : [data];
+	}
+
+	iterify(data) {
+		return new Iterable(data);
+	}
+
+	memoify(data) {
+		const values = this.arrayify(data);
+
+		values.forEach(value => {
+			if (typeof value !== 'string') {
+				throw new Error('parameter value must be of type string');
+			}
+
+			if (this.memoize[value] === undefined) {
+				this.memoize[value] = value.toLowerCase();
+			}
+		});
+
+		return this.iterify(values);
 	}
 
 	setUp({ data, options }) {
@@ -22,56 +50,28 @@ class Parse {
 		}
 	}
 
-	getAdjacency() {
-		return this.adjacency;
-	}
-
-	has(node, target) {
+	has(node, value) {
 		if (!node) {
 			return false;
 		}
 
 		if (node?.attribs?.href) {
-			return node.attribs.href.includes(this.memoize[target]);
+			return node.attribs.href.includes(this.memoize[value]);
 		}
 
 		if (node?.data) {
-			return node.data.toLowerCase().includes(this.memoize[target]);
+			return node.data.toLowerCase().includes(this.memoize[value]);
 		}
 
 		return false;
 	}
 
-	arrayify(data) {
-		return Array.isArray(data) ? data : [data];
-	}
-
-	iterify(data) {
-		return new Iterable(data);
-	}
-
-	memoify(data) {
-		const array = this.arrayify(data);
-
-		array.forEach(value => {
-			if (typeof value !== 'string') {
-				throw new Error('parameter value must be of type string');
-			}
-
-			if (this.memoize[value] === undefined) {
-				this.memoize[value] = value.toLowerCase();
-			}
-		});
-
-		return this.iterify(array);
-	}
-
-	find(target, root = this.root) {
+	find(data, root = this.root) {
 		if (!root) {
 			return [];
 		}
 
-		const targets = this.memoify(target);
+		const values = this.memoify(data);
 
 		let stack = [root];
 
@@ -88,12 +88,12 @@ class Parse {
 
 			this.seen.add(node);
 
-			for (let target of targets) {
-				if (this.has(node, target)) {
-					if (this.adjacency.has(target)) {
-						this.adjacency.set(target, this.adjacency.get(target).concat(node));
+			for (let value of values) {
+				if (this.has(node, value)) {
+					if (this.adjacency.has(value)) {
+						this.adjacency.set(value, this.adjacency.get(value).concat(node));
 					} else {
-						this.adjacency.set(target, [node]);
+						this.adjacency.set(value, [node]);
 					}
 				}
 			}

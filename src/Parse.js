@@ -1,7 +1,7 @@
 import htmlparser2 from 'htmlparser2';
 import { Iterable } from 'Iterable';
 
-export class Parse {
+class Parse {
 	constructor(options) {
 		this.root = null;
 		this.seen = new Set();
@@ -63,7 +63,7 @@ export class Parse {
 			}
 		});
 
-		return array;
+		return this.iterify(array);
 	}
 
 	find(target, root = this.root) {
@@ -88,7 +88,7 @@ export class Parse {
 
 			this.seen.add(node);
 
-			for (let target of this.iterify(targets)) {
+			for (let target of targets) {
 				if (this.has(node, target)) {
 					if (this.adjacency.has(target)) {
 						this.adjacency.set(target, this.adjacency.get(target).concat(node));

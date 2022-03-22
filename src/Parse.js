@@ -5,7 +5,7 @@ export class Parse {
 	constructor(data, options = {}) {
 		this.root = null;
 
-		this.memoize = {};
+		this.memoized = {};
 		this.adjacency = new Map();
 
 		this.setUp(data, options);
@@ -25,31 +25,27 @@ export class Parse {
 		return this.adjacency;
 	}
 
-	arrayify(data) {
+	toArray(data) {
 		if (Array.isArray(data)) {
 			return data;
 		}
 		return [data];
 	}
 
-	iterify(data) {
-		return new Iterable(data);
-	}
-
-	memoify(data) {
-		const values = this.arrayify(data).filter(value => {
+	memoize(data) {
+		const values = this.toArray(data).filter(value => {
 			if (!(typeof value === 'string')) {
 				return false;
 			}
 
-			if (this.memoize[value] === undefined) {
-				this.memoize[value] = value.toLowerCase();
+			if (this.memoized[value] === undefined) {
+				this.memoized[value] = value.toLowerCase();
 			}
 
 			return true;
 		});
 
-		return this.iterify(values);
+		return new Iterable(values);
 	}
 
 	includes(node, value) {
@@ -58,7 +54,7 @@ export class Parse {
 		}
 
 		if (node.attribs) {
-			const attribs = this.iterify(Object.values(node.attribs));
+			const attribs = new Iterable(Object.values(node.attribs));
 
 			for (let attrib of attribs) {
 				if (attrib.toLowerCase().includes(value)) {
@@ -75,7 +71,7 @@ export class Parse {
 			return this;
 		}
 
-		let values = this.memoify(data);
+		let values = this.memoize(data);
 		let stack = [root];
 
 		while (stack.length) {
@@ -86,7 +82,7 @@ export class Parse {
 			}
 
 			for (let value of values) {
-				if (this.includes(node, this.memoize[value])) {
+				if (this.includes(node, this.memoized[value])) {
 					if (this.adjacency.has(value)) {
 						this.adjacency.set(value, this.adjacency.get(value).concat(node));
 					} else {

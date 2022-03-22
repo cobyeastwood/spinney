@@ -50,6 +50,10 @@ export class Parse {
 	}
 
 	includes(node, value) {
+		if (node.data) {
+			return node.data.toLowerCase().includes(value);
+		}
+
 		if (node.attribs) {
 			const attribs = this.iterify(Object.values(node.attribs));
 
@@ -58,10 +62,6 @@ export class Parse {
 					return true;
 				}
 			}
-		}
-
-		if (node.data) {
-			return node.data.toLowerCase().includes(value);
 		}
 
 		return false;

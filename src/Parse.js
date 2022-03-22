@@ -50,12 +50,14 @@ export class Parse {
 	}
 
 	has(node, value) {
-		if (!node) {
-			return false;
-		}
+		if (node?.attribs) {
+			const attribs = this.iterify(Object.values(node.attribs));
 
-		if (node?.attribs?.href) {
-			return node.attribs.href.includes(value);
+			for (let attrib of attribs) {
+				if (attrib.toLowerCase().includes(value)) {
+					return true;
+				}
+			}
 		}
 
 		if (node?.data) {
@@ -76,6 +78,10 @@ export class Parse {
 
 		while (stack.length) {
 			let node = stack.pop();
+
+			if (!node) {
+				continue;
+			}
 
 			for (let value of values) {
 				if (this.memoize[value] && this.has(node, this.memoize[value])) {

@@ -2,13 +2,23 @@ import { parseDocument } from 'htmlparser2';
 import { Iterable } from './Iterable';
 
 export class Parse {
-	constructor(options) {
+	constructor(data, options = {}) {
 		this.root = null;
 
 		this.memoize = {};
 		this.adjacency = new Map();
 
-		this.setUp(options);
+		this.setUp(data, options);
+	}
+
+	setUp(data, options) {
+		if (typeof Buffer !== 'undefined' && Buffer.isBuffer(data)) {
+			data = data.toString();
+		}
+
+		if (typeof data === 'string') {
+			this.root = parseDocument(data, options);
+		}
 	}
 
 	get nodes() {
@@ -24,29 +34,19 @@ export class Parse {
 	}
 
 	memoify(data) {
-		const values = this.arrayify(data);
-
-		values.forEach(value => {
+		const values = this.arrayify(data).filter(value => {
 			if (typeof value !== 'string') {
-				throw new Error('parameter value must be of type string');
+				return false;
 			}
 
 			if (this.memoize[value] === undefined) {
 				this.memoize[value] = value.toLowerCase();
 			}
+
+			return true;
 		});
 
 		return this.iterify(values);
-	}
-
-	setUp({ data, options }) {
-		if (typeof Buffer !== 'undefined' && Buffer.isBuffer(data)) {
-			data = data.toString();
-		}
-
-		if (typeof data === 'string') {
-			this.root = parseDocument(data, options);
-		}
 	}
 
 	has(node, value) {
@@ -72,8 +72,7 @@ export class Parse {
 			return this;
 		}
 
-		const values = this.memoify(data);
-
+		let values = this.memoify(data);
 		let stack = [root];
 
 		while (stack.length) {
@@ -84,7 +83,7 @@ export class Parse {
 			}
 
 			for (let value of values) {
-				if (this.memoize[value] && this.has(node, this.memoize[value])) {
+				if (this.has(node, this.memoize[value])) {
 					if (this.adjacency.has(value)) {
 						this.adjacency.set(value, this.adjacency.get(value).concat(node));
 					} else {

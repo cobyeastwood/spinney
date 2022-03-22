@@ -35,7 +35,7 @@ export class Parse {
 	}
 
 	memoize(data) {
-		const values = this.toArray(data).filter(value => {
+		return this.toArray(data).filter(value => {
 			if (!(typeof value === 'string')) {
 				return false;
 			}
@@ -46,8 +46,6 @@ export class Parse {
 
 			return true;
 		});
-
-		return new Iterable(values);
 	}
 
 	setUp(data, options) {
@@ -83,7 +81,7 @@ export class Parse {
 			return this;
 		}
 
-		let values = this.memoize(data);
+		let values = new Iterable(this.memoize(data));
 		let stack = [root];
 
 		while (stack.length) {
@@ -104,8 +102,8 @@ export class Parse {
 			}
 
 			if (node.children) {
-				for (let key in node.children) {
-					stack.push(node.children[key]);
+				for (let child of node.children) {
+					stack.push(child);
 				}
 			}
 		}

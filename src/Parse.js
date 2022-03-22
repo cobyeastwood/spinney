@@ -4,7 +4,6 @@ import { Iterable } from './Iterable';
 export class Parse {
 	constructor(options) {
 		this.root = null;
-		this.seen = new Set();
 
 		this.memoize = {};
 		this.adjacency = new Map();
@@ -78,16 +77,6 @@ export class Parse {
 		while (stack.length) {
 			let node = stack.pop();
 
-			if (!node) {
-				continue;
-			}
-
-			if (this.seen.has(node)) {
-				continue;
-			}
-
-			this.seen.add(node);
-
 			for (let value of values) {
 				if (this.memoize[value] && this.has(node, this.memoize[value])) {
 					if (this.adjacency.has(value)) {
@@ -96,14 +85,6 @@ export class Parse {
 						this.adjacency.set(value, [node]);
 					}
 				}
-			}
-
-			if (node.prev) {
-				stack.push(node.prev);
-			}
-
-			if (node.next) {
-				stack.push(node.next);
 			}
 
 			if (node.children) {

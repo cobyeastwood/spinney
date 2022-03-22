@@ -1,5 +1,5 @@
-import htmlparser2 from 'htmlparser2';
-import { Iterable } from 'Iterable';
+import { parseDocument } from 'htmlparser2';
+import { Iterable } from './Iterable';
 
 export class Parse {
 	constructor(options) {
@@ -46,7 +46,7 @@ export class Parse {
 		}
 
 		if (typeof data === 'string') {
-			this.root = htmlparser2.parseDocument(data, options);
+			this.root = parseDocument(data, options);
 		}
 	}
 

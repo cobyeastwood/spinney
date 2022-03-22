@@ -20,10 +20,7 @@ export class Parse {
 	}
 
 	get(key) {
-		if (this.adjacency.has(key)) {
-			return this.adjacency.get(key);
-		}
-		return undefined;
+		return this.adjacency.get(key);
 	}
 
 	has(key) {

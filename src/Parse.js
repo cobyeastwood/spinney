@@ -11,18 +11,23 @@ export class Parse {
 		this.setUp(data, options);
 	}
 
-	setUp(data, options) {
-		if (!(typeof Buffer === 'undefined') && Buffer.isBuffer(data)) {
-			data = data.toString();
-		}
-
-		if (typeof data === 'string') {
-			this.root = parseDocument(data, options);
-		}
+	get keys() {
+		return this.adjacency.keys();
 	}
 
-	get nodes() {
-		return this.adjacency;
+	get values() {
+		return this.adjacency.values();
+	}
+
+	get(key) {
+		if (this.adjacency.has(key)) {
+			return this.adjacency.get(key);
+		}
+		return undefined;
+	}
+
+	has(key) {
+		return this.adjacency.has(key);
 	}
 
 	toArray(data) {
@@ -46,6 +51,16 @@ export class Parse {
 		});
 
 		return new Iterable(values);
+	}
+
+	setUp(data, options) {
+		if (!(typeof Buffer === 'undefined') && Buffer.isBuffer(data)) {
+			data = data.toString();
+		}
+
+		if (typeof data === 'string') {
+			this.root = parseDocument(data, options);
+		}
 	}
 
 	includes(node, value) {

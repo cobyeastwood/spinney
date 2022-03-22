@@ -8,6 +8,6 @@ describe('Parse class', () => {
 
 		const self = parse.find('mission');
 
-		expect(self.nodes.has('mission')).toEqual(true);
+		expect(self.has('mission')).toEqual(true);
 	});
 });

@@ -35,7 +35,7 @@ export class Parse {
 
 	memoify(data) {
 		const values = this.arrayify(data).filter(value => {
-			if (typeof value !== 'string') {
+			if (!(typeof value === 'string')) {
 				return false;
 			}
 

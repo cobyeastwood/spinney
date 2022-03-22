@@ -12,7 +12,7 @@ export class Parse {
 	}
 
 	setUp(data, options) {
-		if (typeof Buffer !== 'undefined' && Buffer.isBuffer(data)) {
+		if (!(typeof Buffer === 'undefined') && Buffer.isBuffer(data)) {
 			data = data.toString();
 		}
 
@@ -26,7 +26,10 @@ export class Parse {
 	}
 
 	arrayify(data) {
-		return Array.isArray(data) ? data : [data];
+		if (Array.isArray(data)) {
+			return data;
+		}
+		return [data];
 	}
 
 	iterify(data) {

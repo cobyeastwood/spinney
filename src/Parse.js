@@ -49,8 +49,8 @@ export class Parse {
 		return this.iterify(values);
 	}
 
-	has(node, value) {
-		if (node?.attribs) {
+	includes(node, value) {
+		if (node.attribs) {
 			const attribs = this.iterify(Object.values(node.attribs));
 
 			for (let attrib of attribs) {
@@ -60,7 +60,7 @@ export class Parse {
 			}
 		}
 
-		if (node?.data) {
+		if (node.data) {
 			return node.data.toLowerCase().includes(value);
 		}
 
@@ -83,7 +83,7 @@ export class Parse {
 			}
 
 			for (let value of values) {
-				if (this.has(node, this.memoize[value])) {
+				if (this.includes(node, this.memoize[value])) {
 					if (this.adjacency.has(value)) {
 						this.adjacency.set(value, this.adjacency.get(value).concat(node));
 					} else {

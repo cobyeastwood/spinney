@@ -76,7 +76,11 @@ export class Parse {
 		return false;
 	}
 
-	transverse(cb) {
+	transverse(callback) {
+		if (!(typeof cb === 'function')) {
+			return false;
+		}
+
 		let stack = [this.root];
 
 		while (stack.length) {
@@ -86,7 +90,7 @@ export class Parse {
 				continue;
 			}
 
-			cb(node);
+			callback(node);
 
 			if (node.children) {
 				for (let child of node.children) {
@@ -94,6 +98,8 @@ export class Parse {
 				}
 			}
 		}
+
+		return true;
 	}
 
 	find(data) {

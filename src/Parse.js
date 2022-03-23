@@ -76,13 +76,8 @@ export class Parse {
 		return false;
 	}
 
-	find(data, root = this.root) {
-		if (!root) {
-			return this;
-		}
-
-		let values = new Iterable(this.memoize(data));
-		let stack = [root];
+	transverse(cb) {
+		let stack = [this.root];
 
 		while (stack.length) {
 			let node = stack.pop();
@@ -91,6 +86,20 @@ export class Parse {
 				continue;
 			}
 
+			cb(node);
+
+			if (node.children) {
+				for (let child of node.children) {
+					stack.push(child);
+				}
+			}
+		}
+	}
+
+	find(data) {
+		const values = new Iterable(this.memoize(data));
+
+		const callback = node => {
 			for (let value of values) {
 				if (this.includes(node, this.memoized[value])) {
 					if (this.adjacency.has(value)) {
@@ -100,14 +109,24 @@ export class Parse {
 					}
 				}
 			}
+		};
 
-			if (node.children) {
-				for (let child of node.children) {
-					stack.push(child);
-				}
-			}
-		}
+		this.transverse(callback);
 
 		return this;
+	}
+
+	findAttrib(attrib) {
+		const attribs = new Set();
+
+		const callback = node => {
+			if (node?.attribs?.[attrib]) {
+				attribs.add(node.attribs[attrib]);
+			}
+		};
+
+		this.transverse(callback);
+
+		return Array.from(attribs.values());
 	}
 }

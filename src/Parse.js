@@ -77,7 +77,7 @@ export class Parse {
 	}
 
 	transverse(callback) {
-		if (!(typeof cb === 'function')) {
+		if (!(typeof callback === 'function')) {
 			return false;
 		}
 

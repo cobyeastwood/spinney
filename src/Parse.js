@@ -14,22 +14,6 @@ export class Parse {
 		this.setUp(data, options);
 	}
 
-	get keys() {
-		return this.adjacency.keys();
-	}
-
-	get values() {
-		return this.adjacency.values();
-	}
-
-	get(key) {
-		return this.adjacency.get(key);
-	}
-
-	has(key) {
-		return this.adjacency.has(key);
-	}
-
 	toArray(data) {
 		if (Array.isArray(data)) {
 			return data;
@@ -130,11 +114,12 @@ export class Parse {
 
 	find(keys, attrib) {
 		const isAttrib = typeof attrib === 'string';
+		const memoKeys = this.memoize(keys);
 
 		const callback = node => {
 			if (isAttrib) this.takeAttrib(attrib)(node);
 
-			for (let key of this.memoize(keys)) {
+			for (let key of memoKeys) {
 				if (this.includes(node, this.memoized[key])) {
 					if (this.adjacency.has(key)) {
 						this.adjacency.set(key, this.adjacency.get(key).concat(node));

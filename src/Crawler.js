@@ -11,7 +11,7 @@ class Crawler {
 		this.keys = [];
 	}
 
-	getObservable(keys) {
+	begin(keys) {
 		return new Observable(subscriber => {
 			this.subscriber = subscriber;
 			this.keys = keys;

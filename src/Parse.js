@@ -7,6 +7,9 @@ export class Parse {
 
 		this.memoized = {};
 		this.adjacency = new Map();
+		this.attribs = new Set();
+
+		this.callback;
 
 		this.setUp(data, options);
 	}
@@ -34,18 +37,33 @@ export class Parse {
 		return [data];
 	}
 
-	memoize(data) {
-		return this.toArray(data).filter(value => {
-			if (!(typeof value === 'string')) {
+	fromSet(set) {
+		if (set instanceof Set) {
+			return Array.from(set.values());
+		}
+		return [];
+	}
+
+	fromMap(map) {
+		if (map instanceof Map) {
+			return Array.from(map.values());
+		}
+		return [];
+	}
+
+	memoize(keys) {
+		const array = this.toArray(keys).filter(key => {
+			if (!(typeof key === 'string')) {
 				return false;
 			}
 
-			if (this.memoized[value] === undefined) {
-				this.memoized[value] = value.toLowerCase();
+			if (this.memoized[key] === undefined) {
+				this.memoized[key] = key.toLowerCase();
 			}
 
 			return true;
 		});
+		return new Iterable(array);
 	}
 
 	setUp(data, options) {
@@ -58,16 +76,16 @@ export class Parse {
 		}
 	}
 
-	includes(node, value) {
+	includes(node, key) {
 		if (node.data) {
-			return node.data.toLowerCase().includes(value);
+			return node.data.toLowerCase().includes(key);
 		}
 
 		if (node.attribs) {
 			const attribs = new Iterable(Object.values(node.attribs));
 
 			for (let attrib of attribs) {
-				if (attrib.toLowerCase().includes(value)) {
+				if (attrib.toLowerCase().includes(key)) {
 					return true;
 				}
 			}
@@ -102,16 +120,26 @@ export class Parse {
 		return true;
 	}
 
-	find(data) {
-		const values = new Iterable(this.memoize(data));
+	takeAttrib(attrib) {
+		return node => {
+			if (node?.attribs?.[attrib]) {
+				this.attribs.add(node.attribs[attrib]);
+			}
+		};
+	}
+
+	find(keys, attrib) {
+		const isAttrib = typeof attrib === 'string';
 
 		const callback = node => {
-			for (let value of values) {
-				if (this.includes(node, this.memoized[value])) {
-					if (this.adjacency.has(value)) {
-						this.adjacency.set(value, this.adjacency.get(value).concat(node));
+			if (isAttrib) this.takeAttrib(attrib)(node);
+
+			for (let key of this.memoize(keys)) {
+				if (this.includes(node, this.memoized[key])) {
+					if (this.adjacency.has(key)) {
+						this.adjacency.set(key, this.adjacency.get(key).concat(node));
 					} else {
-						this.adjacency.set(value, [node]);
+						this.adjacency.set(key, [node]);
 					}
 				}
 			}
@@ -119,20 +147,12 @@ export class Parse {
 
 		this.transverse(callback);
 
-		return this;
-	}
+		const raw = { data: this.fromMap(this.adjacency).flat(1) };
 
-	findAttrib(attrib) {
-		const attribs = new Set();
+		if (isAttrib) {
+			raw[attrib.concat('s')] = this.fromSet(this.attribs);
+		}
 
-		const callback = node => {
-			if (node?.attribs?.[attrib]) {
-				attribs.add(node.attribs[attrib]);
-			}
-		};
-
-		this.transverse(callback);
-
-		return Array.from(attribs.values());
+		return raw;
 	}
 }

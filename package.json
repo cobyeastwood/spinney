@@ -1,8 +1,8 @@
 {
-	"name": "parse",
+	"name": "spiny",
 	"version": "1.0.0",
 	"main": "index.js",
-	"repository": "git@github.com:cobyeastwood/parse.git",
+	"repository": "git@github.com:cobyeastwood/spiny.git",
 	"author": "cobyeastwood <cobyeastwood@gmail.com>",
 	"license": "MIT",
 	"scripts": {

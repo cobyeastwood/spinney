@@ -1,4 +1,4 @@
-import Parse from '..';
+import { Parse } from '..';
 
 describe('Parse class', () => {
 	it('should find a string in parsed output', () => {

@@ -4,7 +4,7 @@ import { Parse } from './Parse';
 
 const MAX_RETRIES = 5;
 
-class Crawler {
+class Spiny {
 	constructor(href) {
 		this.seen = new Set();
 		this.href = href;
@@ -23,9 +23,9 @@ class Crawler {
 		this.processing = false;
 	}
 
-	init(keys) {
+	spin(keys) {
 		if (!keys) {
-			throw new Error(`init expected parameter keys not to be ${typeof keys}`);
+			throw new Error(`spin expected parameter keys not to be ${typeof keys}`);
 		}
 
 		this.keys = keys;
@@ -140,4 +140,4 @@ class Crawler {
 	}
 }
 
-export { Crawler };
+export { Spiny };

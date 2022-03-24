@@ -12,6 +12,12 @@ export class Parse {
 		this.setUp(data, options);
 	}
 
+	setUp(data, options) {
+		if (typeof data === 'string') {
+			this.root = parseDocument(data, options);
+		}
+	}
+
 	toArray(data) {
 		if (Array.isArray(data)) {
 			return data;
@@ -35,7 +41,7 @@ export class Parse {
 
 	memoize(keys) {
 		const array = this.toArray(keys).filter(key => {
-			if (!(typeof key === 'string')) {
+			if (typeof key !== 'string') {
 				return false;
 			}
 
@@ -48,26 +54,14 @@ export class Parse {
 		return new Iterable(array);
 	}
 
-	setUp(data, options) {
-		if (!(typeof Buffer === 'undefined') && Buffer.isBuffer(data)) {
-			data = data.toString();
-		}
-
-		if (typeof data === 'string') {
-			this.root = parseDocument(data, options);
-		}
-	}
-
 	includes(node, key) {
 		if (node.data) {
 			return node.data.toLowerCase().includes(key);
 		}
 
 		if (node.attribs) {
-			const attribs = new Iterable(Object.values(node.attribs));
-
-			for (let attrib of attribs) {
-				if (attrib.toLowerCase().includes(key)) {
+			for (let attrib in node.attribs) {
+				if (node.attribs[attrib].toLowerCase().includes(key)) {
 					return true;
 				}
 			}
@@ -98,18 +92,16 @@ export class Parse {
 
 	find(keys, attrib) {
 		const isAttrib = typeof attrib === 'string';
-		const iterableKeys = this.memoize(keys);
-
-		const pickAttrib = node => {
-			if (node?.attribs?.[attrib]) {
-				this.attribs.add(node.attribs[attrib]);
-			}
-		};
+		const memoized = this.memoize(keys);
 
 		const callback = node => {
-			if (isAttrib) pickAttrib(node);
+			if (isAttrib) {
+				if (node?.attribs?.[attrib]) {
+					this.attribs.add(node.attribs[attrib]);
+				}
+			}
 
-			for (let key of iterableKeys) {
+			for (let key of memoized) {
 				if (this.includes(node, this.memoized[key])) {
 					if (this.adjacency.has(key)) {
 						this.adjacency.set(key, this.adjacency.get(key).concat(node));

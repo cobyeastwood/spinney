@@ -2,6 +2,8 @@ import axios from 'axios';
 import { Observable } from 'rxjs';
 import { Parse } from './Parse';
 
+const MAX_RETRIES = 5;
+
 class Crawler {
 	constructor(href) {
 		this.seen = new Set();
@@ -34,6 +36,10 @@ class Crawler {
 				return undefined;
 			}
 
+			if (href.includes('assets')) {
+				return undefined;
+			}
+
 			if (!this.seen.has(originHref)) {
 				this.seen.add(originHref);
 				return originHref;
@@ -50,32 +56,51 @@ class Crawler {
 		return undefined;
 	}
 
+	timeout(ms) {
+		return new Promise(resolve => setTimeout(resolve, ms));
+	}
+
 	async fetch(href) {
 		try {
-			const resps = await axios.get(href);
-			const parse = new Parse(resps.data);
+			let retryAttempts = 0;
 
-			const { data, hrefs } = parse.find(this.keys, 'href');
+			const retry = async () => {
+				try {
+					const resps = await axios.get(href);
+					const parse = new Parse(resps.data);
 
-			const originHrefs = hrefs
-				.map(href => this.findOriginHref(href))
-				.filter(Boolean);
+					const { data, hrefs } = parse.find(this.keys, 'href');
 
-			this.subscriber.next({ href, data });
+					const originHrefs = hrefs
+						.map(href => this.findOriginHref(href))
+						.filter(Boolean);
 
-			return originHrefs;
-		} catch (e) {
-			if (e?.response?.status) {
-				switch (e.response.status) {
-					case 404:
-						break;
-					default:
-						this.subscriber.error(e);
-						break;
+					this.subscriber.next({ href, data });
+
+					return originHrefs;
+				} catch (error) {
+					if (retryAttempts >= MAX_RETRIES) {
+						throw error;
+					}
+
+					if (error?.response?.status) {
+						switch (error.response.status) {
+							case 404:
+								return;
+							default:
+								retryAttempts++;
+								await this.timeout(500);
+								return await retry();
+						}
+					} else {
+						throw error;
+					}
 				}
-			} else {
-				this.subscriber.error(e);
-			}
+			};
+
+			return await retry();
+		} catch (error) {
+			this.subscriber.error(error);
 		}
 	}
 

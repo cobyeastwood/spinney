@@ -6,8 +6,8 @@ describe('Parse class', () => {
 			`<span style="font-size:15px;"><span style="font-size:15px;">-THE MISSION IS OURS-</span></p></span></p><span style="font-size:15px;">-THE MISSION IS OURS-</span></p>`
 		);
 
-		const self = parse.find('mission');
+		const { data } = parse.find('mission');
 
-		expect(self.has('mission')).toEqual(true);
+		expect(Boolean(data.length)).toEqual(true);
 	});
 });

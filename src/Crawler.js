@@ -13,11 +13,32 @@ class Crawler {
 		this.keys = [];
 	}
 
-	begin(keys) {
+	processing;
+
+	resume() {
+		this.processing = true;
+	}
+
+	pause() {
+		this.processing = false;
+	}
+
+	init(keys) {
+		if (!keys) {
+			throw new Error(`init expected parameter keys not to be ${typeof keys}`);
+		}
+
+		this.keys = keys;
+
 		return new Observable(subscriber => {
 			this.subscriber = subscriber;
-			this.keys = keys;
+
+			this.resume();
 			this.next([this.href]);
+
+			return () => {
+				this.pause();
+			};
 		});
 	}
 
@@ -101,18 +122,21 @@ class Crawler {
 			return await retry();
 		} catch (error) {
 			this.subscriber.error(error);
+			this.pause();
 		}
 	}
 
 	async next(hrefs) {
 		if (this.isEmpty(hrefs)) {
 			this.subscriber.complete();
+			this.pause();
 			return;
 		}
 
-		const nextHrefs = await Promise.all(hrefs.map(href => this.fetch(href)));
-
-		await this.next(...nextHrefs);
+		if (this.processing) {
+			const nextHrefs = await Promise.all(hrefs.map(href => this.fetch(href)));
+			await this.next(...nextHrefs);
+		}
 	}
 }
 

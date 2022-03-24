@@ -9,8 +9,6 @@ export class Parse {
 		this.adjacency = new Map();
 		this.attribs = new Set();
 
-		this.callback;
-
 		this.setUp(data, options);
 	}
 
@@ -78,11 +76,7 @@ export class Parse {
 		return false;
 	}
 
-	transverse(callback) {
-		if (!(typeof callback === 'function')) {
-			return false;
-		}
-
+	transverse(callback = () => {}) {
 		let stack = [this.root];
 
 		while (stack.length) {
@@ -100,26 +94,22 @@ export class Parse {
 				}
 			}
 		}
-
-		return true;
-	}
-
-	takeAttrib(attrib) {
-		return node => {
-			if (node?.attribs?.[attrib]) {
-				this.attribs.add(node.attribs[attrib]);
-			}
-		};
 	}
 
 	find(keys, attrib) {
 		const isAttrib = typeof attrib === 'string';
-		const memoKeys = this.memoize(keys);
+		const iterableKeys = this.memoize(keys);
+
+		const pickAttrib = node => {
+			if (node?.attribs?.[attrib]) {
+				this.attribs.add(node.attribs[attrib]);
+			}
+		};
 
 		const callback = node => {
-			if (isAttrib) this.takeAttrib(attrib)(node);
+			if (isAttrib) pickAttrib(node);
 
-			for (let key of memoKeys) {
+			for (let key of iterableKeys) {
 				if (this.includes(node, this.memoized[key])) {
 					if (this.adjacency.has(key)) {
 						this.adjacency.set(key, this.adjacency.get(key).concat(node));
@@ -132,12 +122,14 @@ export class Parse {
 
 		this.transverse(callback);
 
-		const raw = { data: this.fromMap(this.adjacency).flat(1) };
+		const data = this.fromMap(this.adjacency);
+		const raws = { data: data.flat(1) };
 
 		if (isAttrib) {
-			raw[attrib.concat('s')] = this.fromSet(this.attribs);
+			const attribsKey = attrib.concat('s');
+			raws[attribsKey] = this.fromSet(this.attribs);
 		}
 
-		return raw;
+		return raws;
 	}
 }

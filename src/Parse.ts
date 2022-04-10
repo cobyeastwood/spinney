@@ -1,9 +1,17 @@
 import { parseDocument } from 'htmlparser2';
+import {
+	Document,
+	DocumentNode,
+	NodeWithChildren,
+	Memoized,
+	Stack,
+	Raws,
+} from './types';
 
 export class Parse {
-	root: unknown;
-	memoized: any;
-	adjacency: Map<string, any>;
+	root: Document | DocumentNode;
+	memoized: Memoized;
+	adjacency: Map<string, DocumentNode[]>;
 	attribs: Set<string>;
 
 	constructor(data: string, options = {}) {
@@ -16,34 +24,34 @@ export class Parse {
 		this.setUp(data, options);
 	}
 
-	setUp(data: string, options: any) {
+	setUp(data: string, options: any): void {
 		if (typeof data === 'string') {
-			this.root = parseDocument(data, options);
+			this.root = parseDocument(data, options) as Document;
 		}
 	}
 
-	toArray(data: any) {
+	toArray(data: any): any[] {
 		if (Array.isArray(data)) {
 			return data;
 		}
 		return [data];
 	}
 
-	fromSet(set: Set<string>) {
+	fromSet(set: Set<any>): any[] {
 		if (set instanceof Set) {
 			return Array.from(set.values());
 		}
 		return [];
 	}
 
-	fromMap(map: Map<string, any>) {
+	fromMap(map: Map<any, any>): any[] {
 		if (map instanceof Map) {
 			return Array.from(map.values());
 		}
 		return [];
 	}
 
-	memo(keys: string | string[]) {
+	memo(keys: string | string[]): string[] {
 		return this.toArray(keys).filter(key => {
 			if (typeof key !== 'string') {
 				return false;
@@ -57,15 +65,15 @@ export class Parse {
 		});
 	}
 
-	includes(node: any, key: string) {
+	includes(node: any, key: string): boolean {
 		if (node.data) {
-			return node.data.toLowerCase().includes(key);
+			return node.data.toLowerCase().indexOf(key) !== -1;
 		}
 
 		if (node.attribs) {
 			for (let attrib in node.attribs) {
-				if (node.attribs[attrib].toLowerCase().includes(key)) {
-					return true;
+				if ((attrib = node.attribs[attrib])) {
+					return attrib.toLowerCase().indexOf(key) !== -1;
 				}
 			}
 		}
@@ -73,11 +81,11 @@ export class Parse {
 		return false;
 	}
 
-	transverse(callback: (node: any) => void) {
-		let stack: any[] = [this.root];
+	transverse(callback: (node: DocumentNode) => void): void {
+		let stack: Stack = [this.root];
 
 		while (stack.length) {
-			let node: any = stack.pop();
+			const node: DocumentNode = stack.pop() as DocumentNode;
 
 			if (!node) {
 				continue;
@@ -85,7 +93,7 @@ export class Parse {
 
 			callback(node);
 
-			if (node.children) {
+			if (node instanceof NodeWithChildren && node?.children) {
 				for (let child of node.children) {
 					stack.push(child);
 				}
@@ -107,7 +115,10 @@ export class Parse {
 			for (let key of memoizedKeys) {
 				if (this.includes(node, this.memoized[key])) {
 					if (this.adjacency.has(key)) {
-						this.adjacency.set(key, this.adjacency.get(key).concat(node));
+						this.adjacency.set(
+							key,
+							(this.adjacency.get(key) as DocumentNode[]).concat(node)
+						);
 					} else {
 						this.adjacency.set(key, [node]);
 					}
@@ -117,8 +128,10 @@ export class Parse {
 
 		this.transverse(callback);
 
-		const data: any = this.fromMap(this.adjacency);
-		const raws: any = { data: data.flat(1) };
+		const data: DocumentNode[] = this.fromMap(this.adjacency);
+		const raws: Raws = {
+			data: data.flat(1),
+		};
 
 		if (isAttrib) {
 			const attribsKey = attrib.concat('s');

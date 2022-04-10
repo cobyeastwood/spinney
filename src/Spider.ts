@@ -35,7 +35,7 @@ class Spider {
 		this.processing = false;
 	}
 
-	spin(keys: string | string[]) {
+	spin(keys: string | string[]): Observable<any> {
 		if (!keys) {
 			throw new Error(`spin expected parameter keys not to be ${typeof keys}`);
 		}
@@ -58,7 +58,7 @@ class Spider {
 		return !Array.isArray(hrefs) || hrefs.length === 0;
 	}
 
-	findOriginHref(href: string) {
+	findOriginHref(href: string): string | undefined {
 		const decoded = new URL(this.href);
 
 		if (href.startsWith('/')) {
@@ -89,7 +89,7 @@ class Spider {
 		return undefined;
 	}
 
-	timeout(ms: number) {
+	timeout(ms: number): Promise<void> {
 		return new Promise(resolve => setTimeout(resolve, ms));
 	}
 
@@ -97,7 +97,7 @@ class Spider {
 		try {
 			let retryAttempts = 0;
 
-			const retry: () => string[] | Promise<this> = async () => {
+			const retry: () => Promise<this | any[] | undefined> = async () => {
 				try {
 					const resps = await axios.get(href);
 					const parse = new Parse(resps.data);
@@ -138,7 +138,7 @@ class Spider {
 		}
 	}
 
-	async next(hrefs: string[]) {
+	async next(hrefs: string[]): Promise<void> {
 		if (this.isEmpty(hrefs)) {
 			this.subscriber.complete();
 			this.pause();

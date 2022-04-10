@@ -8,14 +8,12 @@ class Spider {
 	private seen: Set<string>;
 	private subscriber: any;
 	private processing: boolean | undefined;
-	href: string;
-	data: any[];
-	keys: string[];
+	private href: string;
+	private keys: string[];
 
 	constructor(href: string) {
 		this.seen = new Set();
 		this.href = href;
-		this.data = [];
 		this.subscriber;
 		this.keys = [];
 	}
@@ -27,12 +25,16 @@ class Spider {
 		return [data];
 	}
 
-	resume() {
+	protected resume() {
 		this.processing = true;
 	}
 
-	pause() {
+	protected pause() {
 		this.processing = false;
+	}
+
+	protected isEmpty(hrefs: any) {
+		return !Array.isArray(hrefs) || hrefs.length === 0;
 	}
 
 	spin(keys: string | string[]): Observable<any> {
@@ -54,11 +56,7 @@ class Spider {
 		});
 	}
 
-	isEmpty(hrefs: any) {
-		return !Array.isArray(hrefs) || hrefs.length === 0;
-	}
-
-	findOriginHref(href: string): string | undefined {
+	protected findOriginHref(href: string): string | undefined {
 		const decoded = new URL(this.href);
 
 		if (href.startsWith('/')) {
@@ -89,7 +87,7 @@ class Spider {
 		return undefined;
 	}
 
-	private timeout(ms: number): Promise<void> {
+	protected timeout(ms: number): Promise<void> {
 		return new Promise(resolve => setTimeout(resolve, ms));
 	}
 

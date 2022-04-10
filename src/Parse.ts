@@ -46,22 +46,6 @@ export class Parse {
 		});
 	}
 
-	private includes(node: DocumentNode, key: string): boolean {
-		if (node instanceof DataNode && node.data) {
-			return node.data.toLowerCase().indexOf(key) !== -1;
-		}
-
-		if (node instanceof Element && node.attribs) {
-			for (let attrib in node.attribs) {
-				if ((attrib = node.attribs[attrib])) {
-					return attrib.toLowerCase().indexOf(key) !== -1;
-				}
-			}
-		}
-
-		return false;
-	}
-
 	toArray(data: any): any[] {
 		if (Array.isArray(data)) {
 			return data;
@@ -83,7 +67,23 @@ export class Parse {
 		return [];
 	}
 
-	transverse(callback: (node: DocumentNode) => void): void {
+	protected includes(node: DocumentNode, key: string): boolean {
+		if (node instanceof DataNode && node.data) {
+			return node.data.toLowerCase().indexOf(key) !== -1;
+		}
+
+		if (node instanceof Element && node.attribs) {
+			for (let attrib in node.attribs) {
+				if ((attrib = node.attribs[attrib])) {
+					return attrib.toLowerCase().indexOf(key) !== -1;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	protected transverse(callback: (node: DocumentNode) => void): void {
 		let stack: Stack = [this.root];
 
 		while (stack.length) {

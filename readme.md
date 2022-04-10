@@ -14,7 +14,7 @@ const spider = new Spider('https://google.com/');
 const observable = spider.spin(['foo', 'bar']);
 
 // Subscribe to key changes
-observable.subscribe({
+const subscription = observable.subscribe({
 	next(elements) {
 		console.log(elements);
 	},
@@ -27,5 +27,5 @@ observable.subscribe({
 });
 
 // Unsubscribe to key changes
-observable.unsubscribe();
+subscription.unsubscribe();
 ```

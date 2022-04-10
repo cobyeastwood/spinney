@@ -1,7 +1,7 @@
 {
 	"name": "spinney",
 	"version": "1.0.0",
-	"main": "index.js",
+	"main": "dist/bundle.js",
 	"repository": "git@github.com:cobyeastwood/spinney.git",
 	"author": "cobyeastwood <cobyeastwood@gmail.com>",
 	"license": "MIT",
@@ -10,14 +10,14 @@
 		"test": "jest"
 	},
 	"dependencies": {
-		"@rollup/plugin-commonjs": "^21.0.2",
-		"@rollup/plugin-node-resolve": "^13.1.3",
 		"axios": "^0.26.1",
 		"htmlparser2": "^7.2.0",
-		"rollup": "^2.70.1",
 		"rxjs": "^7.5.5"
 	},
 	"devDependencies": {
+		"rollup": "^2.70.1",
+		"@rollup/plugin-commonjs": "^21.0.2",
+		"@rollup/plugin-node-resolve": "^13.1.3",
 		"@babel/core": "^7.17.8",
 		"@babel/preset-env": "^7.16.11",
 		"babel-jest": "^27.5.1",

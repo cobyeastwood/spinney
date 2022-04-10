@@ -7,6 +7,7 @@ export default {
 		file: 'dist/bundle.js',
 		format: 'umd',
 		name: 'Spinney',
+		sourcemap: true,
 	},
 	plugin: [commonjs(), resolve()],
 };

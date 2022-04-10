@@ -4,7 +4,7 @@ import { Parse } from './Parse';
 
 const MAX_RETRIES = 5;
 
-class Spiny {
+class Spinney {
 	constructor(href) {
 		this.seen = new Set();
 		this.href = href;
@@ -140,4 +140,4 @@ class Spiny {
 	}
 }
 
-export { Spiny };
+export { Spinney };

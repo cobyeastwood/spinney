@@ -1,5 +1,5 @@
 import { Observable } from 'rxjs';
-import Spider from '..';
+import { Spider } from '..';
 
 describe('Spider class', () => {
 	it('spin should return an error on empty input', () => {

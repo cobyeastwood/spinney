@@ -1,11 +1,4 @@
-## Spinney
-
-A fast and simple web scraping parser.
-
-### Basic Example
-
-```javascript
-const { Spider } = require('spinney');
+const { Spider } = require('./dist/bundle.js');
 
 // Register an endpoint to scrape
 const spider = new Spider('https://google.com/');
@@ -14,7 +7,7 @@ const spider = new Spider('https://google.com/');
 const observable = spider.spin(['foo', 'bar']);
 
 // Subscribe to key changes
-observable.subscribe({
+const subscription = observable.subscribe({
 	next(elements) {
 		console.log(elements);
 	},
@@ -27,5 +20,4 @@ observable.subscribe({
 });
 
 // Unsubscribe to key changes
-observable.unsubscribe();
-```
+subscription.unsubscribe();

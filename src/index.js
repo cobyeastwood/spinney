@@ -1,5 +1,5 @@
 import { Iterable } from './Iterable';
 import { Parse } from './Parse';
-import { Spinney } from './Spinney';
+import { Spider } from './Spider';
 
-export { Spinney, Iterable, Parse };
+export { Spider, Iterable, Parse };

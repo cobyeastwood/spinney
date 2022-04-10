@@ -1,7 +1,7 @@
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('htmlparser2'), require('axios'), require('rxjs')) :
 	typeof define === 'function' && define.amd ? define(['exports', 'htmlparser2', 'axios', 'rxjs'], factory) :
-	(global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.Spinney = {}, global.htmlparser2, global.axios, global.rxjs));
+	(global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.spinney = {}, global.htmlparser2, global.axios, global.rxjs));
 })(this, (function (exports, htmlparser2, axios, rxjs) { 'use strict';
 
 	function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
@@ -155,7 +155,7 @@
 
 	const MAX_RETRIES = 5;
 
-	class Spinney {
+	class Spider {
 		constructor(href) {
 			this.seen = new Set();
 			this.href = href;
@@ -293,7 +293,7 @@
 
 	exports.Iterable = Iterable;
 	exports.Parse = Parse;
-	exports.Spinney = Spinney;
+	exports.Spider = Spider;
 
 	Object.defineProperty(exports, '__esModule', { value: true });
 

@@ -1,6 +1,6 @@
 import { Iterable } from './Iterable';
 import { Parse } from './Parse';
-import { Spiny } from './Spiny';
+import { Spinney } from './Spinney';
 
-export default Spiny;
+export default Spinney;
 export { Iterable, Parse };

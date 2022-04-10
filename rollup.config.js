@@ -6,7 +6,7 @@ export default {
 	output: {
 		file: 'dist/bundle.js',
 		format: 'umd',
-		name: 'Spiny',
+		name: 'Spinney',
 	},
 	plugin: [commonjs(), resolve()],
 };

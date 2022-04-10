@@ -5,13 +5,13 @@ A fast and powerful web scraping parser.
 ### Basic Example
 
 ```javascript
-const Spinney = require('spinney');
+const { Spider } = require('spinney');
 
 // Register an endpoint to scrape
-const spinney = new Spinney('https://google.com/');
+const spider = new Spider('https://google.com/');
 
 // Begin search process on provided keys
-const observable = spinney.spin(['foo', 'bar']);
+const observable = spider.spin(['foo', 'bar']);
 
 // Subscribe to key changes
 const subscription = observable.subscribe({

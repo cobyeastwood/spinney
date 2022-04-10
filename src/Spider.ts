@@ -5,12 +5,12 @@ import { Parse } from './Parse';
 const MAX_RETRIES = 5;
 
 class Spider {
-	seen: Set<string>;
+	private seen: Set<string>;
+	private subscriber: any;
+	private processing: boolean | undefined;
 	href: string;
 	data: any[];
-	subscriber: any;
 	keys: string[];
-	processing: boolean | undefined;
 
 	constructor(href: string) {
 		this.seen = new Set();
@@ -89,11 +89,11 @@ class Spider {
 		return undefined;
 	}
 
-	timeout(ms: number): Promise<void> {
+	private timeout(ms: number): Promise<void> {
 		return new Promise(resolve => setTimeout(resolve, ms));
 	}
 
-	async fetch(href: any): Promise<any> {
+	private async fetch(href: any): Promise<any> {
 		try {
 			let retryAttempts = 0;
 
@@ -138,7 +138,7 @@ class Spider {
 		}
 	}
 
-	async next(hrefs: string[]): Promise<void> {
+	private async next(hrefs: string[]): Promise<void> {
 		if (this.isEmpty(hrefs)) {
 			this.subscriber.complete();
 			this.pause();

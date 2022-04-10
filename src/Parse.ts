@@ -2,6 +2,8 @@ import { parseDocument } from 'htmlparser2';
 import {
 	Document,
 	DocumentNode,
+	Element,
+	DataNode,
 	NodeWithChildren,
 	Memoized,
 	Stack,
@@ -9,9 +11,9 @@ import {
 } from './types';
 
 export class Parse {
+	private memoized: Memoized;
+	private adjacency: Map<string, DocumentNode[]>;
 	root: Document | DocumentNode;
-	memoized: Memoized;
-	adjacency: Map<string, DocumentNode[]>;
 	attribs: Set<string>;
 
 	constructor(data: string, options = {}) {
@@ -24,10 +26,40 @@ export class Parse {
 		this.setUp(data, options);
 	}
 
-	setUp(data: string, options: any): void {
+	private setUp(data: string, options: any): void {
 		if (typeof data === 'string') {
 			this.root = parseDocument(data, options) as Document;
 		}
+	}
+
+	private memo(keys: string | string[]): string[] {
+		return this.toArray(keys).filter(key => {
+			if (typeof key !== 'string') {
+				return false;
+			}
+
+			if (this.memoized[key] === undefined) {
+				this.memoized[key] = key.toLowerCase();
+			}
+
+			return true;
+		});
+	}
+
+	private includes(node: DocumentNode, key: string): boolean {
+		if (node instanceof DataNode && node.data) {
+			return node.data.toLowerCase().indexOf(key) !== -1;
+		}
+
+		if (node instanceof Element && node.attribs) {
+			for (let attrib in node.attribs) {
+				if ((attrib = node.attribs[attrib])) {
+					return attrib.toLowerCase().indexOf(key) !== -1;
+				}
+			}
+		}
+
+		return false;
 	}
 
 	toArray(data: any): any[] {
@@ -51,36 +83,6 @@ export class Parse {
 		return [];
 	}
 
-	memo(keys: string | string[]): string[] {
-		return this.toArray(keys).filter(key => {
-			if (typeof key !== 'string') {
-				return false;
-			}
-
-			if (this.memoized[key] === undefined) {
-				this.memoized[key] = key.toLowerCase();
-			}
-
-			return true;
-		});
-	}
-
-	includes(node: any, key: string): boolean {
-		if (node.data) {
-			return node.data.toLowerCase().indexOf(key) !== -1;
-		}
-
-		if (node.attribs) {
-			for (let attrib in node.attribs) {
-				if ((attrib = node.attribs[attrib])) {
-					return attrib.toLowerCase().indexOf(key) !== -1;
-				}
-			}
-		}
-
-		return false;
-	}
-
 	transverse(callback: (node: DocumentNode) => void): void {
 		let stack: Stack = [this.root];
 
@@ -101,13 +103,13 @@ export class Parse {
 		}
 	}
 
-	find(keys: string | string[], attrib?: any) {
+	find(keys: string | string[], attrib?: string) {
 		const isAttrib = typeof attrib === 'string';
 		const memoizedKeys = this.memo(keys);
 
-		const callback = (node: any) => {
+		const callback = (node: DocumentNode) => {
 			if (isAttrib) {
-				if (node?.attribs?.[attrib]) {
+				if (node instanceof Element && node?.attribs?.[attrib]) {
 					this.attribs.add(node.attribs[attrib]);
 				}
 			}

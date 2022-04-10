@@ -26,6 +26,6 @@ observable.subscribe({
 	},
 });
 
-// Unsubscribe to cancel
+// Unsubscribe to key changes
 observable.unsubscribe();
 ```

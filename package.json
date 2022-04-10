@@ -1,8 +1,7 @@
 {
-	"name": "spinney",
+	"name": "node-spinneyz",
+	"description": "A fast and powerful web scraping parser.",
 	"version": "1.0.0",
-	"main": "lib/index.js",
-	"repository": "git@github.com:cobyeastwood/spinney.git",
 	"author": "cobyeastwood <cobyeastwood@gmail.com>",
 	"license": "MIT",
 	"keywords": [
@@ -11,12 +10,19 @@
 		"scraper",
 		"parser"
 	],
-	"jest": {
-		"preset": "ts-jest"
+	"repository": "git@github.com:cobyeastwood/spinney.git",
+	"directories": {
+		"lib": "lib/"
 	},
+	"main": "lib/index.js",
+	"types": "lib/index.d.ts",
+	"files": [
+		"lib/**/*"
+	],
 	"scripts": {
 		"test": "jest",
-		"build": "tsc"
+		"build": "tsc",
+		"prepare": "yarn run build"
 	},
 	"dependencies": {
 		"@types/axios": "^0.14.0",
@@ -33,5 +39,9 @@
 		"jest": "^27.5.1",
 		"ts-jest": "^27.1.4",
 		"typescript": "^4.6.3"
+	},
+	"jest": {
+		"preset": "ts-jest",
+		"testEnvironment": "node"
 	}
 }

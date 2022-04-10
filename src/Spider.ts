@@ -4,7 +4,7 @@ import { Parse } from './Parse';
 
 const MAX_RETRIES = 5;
 
-class Spinney {
+class Spider {
 	seen: Set<string>;
 	href: string;
 	data: any[];
@@ -154,4 +154,4 @@ class Spinney {
 	}
 }
 
-export { Spinney };
+export { Spider };

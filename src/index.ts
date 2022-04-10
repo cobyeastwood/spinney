@@ -1,5 +1,4 @@
 import { Parse } from './Parse';
-import { Spinney } from './Spinney';
+import { Spider } from './Spider';
 
-export default Spinney;
-export { Parse };
+export { Parse, Spider };

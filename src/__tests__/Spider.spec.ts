@@ -1,15 +1,15 @@
 import { Observable } from 'rxjs';
-import Spinney from '..';
+import { Spider } from '..';
 
-describe('Spinney class', () => {
+describe('Spider class', () => {
 	it('spin should return an error on empty input', () => {
-		const spinney = new Spinney('https://www.example.com/');
+		const spider = new Spider('https://www.example.com/');
 
-		expect(() => spinney.spin('')).toThrow();
+		expect(() => spider.spin('')).toThrow();
 	});
 	it('spin should return an observable instance', () => {
-		const spinney = new Spinney('https://www.example.com/');
+		const spider = new Spider('https://www.example.com/');
 
-		expect(spinney.spin('keys') instanceof Observable).toEqual(true);
+		expect(spider.spin('keys') instanceof Observable).toEqual(true);
 	});
 });

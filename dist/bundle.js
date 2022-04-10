@@ -8,26 +8,6 @@
 
 	var axios__default = /*#__PURE__*/_interopDefaultLegacy(axios);
 
-	class Iterable {
-		constructor(data) {
-			this.data = data;
-		}
-
-		[Symbol.iterator]() {
-			let index = 0;
-
-			return {
-				next: () => {
-					if (index < this.data.length) {
-						return { value: this.data[index++], done: false };
-					} else {
-						return { done: true };
-					}
-				},
-			};
-		}
-	}
-
 	class Parse {
 		constructor(data, options = {}) {
 			this.root = null;
@@ -66,8 +46,8 @@
 			return [];
 		}
 
-		memoize(keys) {
-			const array = this.toArray(keys).filter(key => {
+		memo(keys) {
+			return this.toArray(keys).filter(key => {
 				if (typeof key !== 'string') {
 					return false;
 				}
@@ -78,7 +58,6 @@
 
 				return true;
 			});
-			return new Iterable(array);
 		}
 
 		includes(node, key) {
@@ -119,7 +98,7 @@
 
 		find(keys, attrib) {
 			const isAttrib = typeof attrib === 'string';
-			const memoized = this.memoize(keys);
+			const memoizedKeys = this.memo(keys);
 
 			const callback = node => {
 				if (isAttrib) {
@@ -128,7 +107,7 @@
 					}
 				}
 
-				for (let key of memoized) {
+				for (let key of memoizedKeys) {
 					if (this.includes(node, this.memoized[key])) {
 						if (this.adjacency.has(key)) {
 							this.adjacency.set(key, this.adjacency.get(key).concat(node));
@@ -291,7 +270,6 @@
 		}
 	}
 
-	exports.Iterable = Iterable;
 	exports.Parse = Parse;
 	exports.Spider = Spider;
 

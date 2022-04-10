@@ -1,5 +1,4 @@
 import { parseDocument } from 'htmlparser2';
-import { Iterable } from './Iterable';
 
 export class Parse {
 	constructor(data, options = {}) {
@@ -39,8 +38,8 @@ export class Parse {
 		return [];
 	}
 
-	memoize(keys) {
-		const array = this.toArray(keys).filter(key => {
+	memo(keys) {
+		return this.toArray(keys).filter(key => {
 			if (typeof key !== 'string') {
 				return false;
 			}
@@ -51,7 +50,6 @@ export class Parse {
 
 			return true;
 		});
-		return new Iterable(array);
 	}
 
 	includes(node, key) {
@@ -92,7 +90,7 @@ export class Parse {
 
 	find(keys, attrib) {
 		const isAttrib = typeof attrib === 'string';
-		const memoized = this.memoize(keys);
+		const memoizedKeys = this.memo(keys);
 
 		const callback = node => {
 			if (isAttrib) {
@@ -101,7 +99,7 @@ export class Parse {
 				}
 			}
 
-			for (let key of memoized) {
+			for (let key of memoizedKeys) {
 				if (this.includes(node, this.memoized[key])) {
 					if (this.adjacency.has(key)) {
 						this.adjacency.set(key, this.adjacency.get(key).concat(node));

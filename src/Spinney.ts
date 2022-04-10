@@ -4,8 +4,15 @@ import { Parse } from './Parse';
 
 const MAX_RETRIES = 5;
 
-class Spider {
-	constructor(href) {
+class Spinney {
+	seen: Set<string>;
+	href: string;
+	data: any[];
+	subscriber: any;
+	keys: string[];
+	processing: boolean | undefined;
+
+	constructor(href: string) {
 		this.seen = new Set();
 		this.href = href;
 		this.data = [];
@@ -13,7 +20,12 @@ class Spider {
 		this.keys = [];
 	}
 
-	processing;
+	toArray(data: any) {
+		if (Array.isArray(data)) {
+			return data;
+		}
+		return [data];
+	}
 
 	resume() {
 		this.processing = true;
@@ -23,12 +35,12 @@ class Spider {
 		this.processing = false;
 	}
 
-	spin(keys) {
+	spin(keys: string | string[]) {
 		if (!keys) {
 			throw new Error(`spin expected parameter keys not to be ${typeof keys}`);
 		}
 
-		this.keys = keys;
+		this.keys = this.toArray(keys);
 
 		return new Observable(subscriber => {
 			this.subscriber = subscriber;
@@ -42,11 +54,11 @@ class Spider {
 		});
 	}
 
-	isEmpty(hrefs) {
+	isEmpty(hrefs: any) {
 		return !Array.isArray(hrefs) || hrefs.length === 0;
 	}
 
-	findOriginHref(href) {
+	findOriginHref(href: string) {
 		const decoded = new URL(this.href);
 
 		if (href.startsWith('/')) {
@@ -77,15 +89,15 @@ class Spider {
 		return undefined;
 	}
 
-	timeout(ms) {
+	timeout(ms: number) {
 		return new Promise(resolve => setTimeout(resolve, ms));
 	}
 
-	async fetch(href) {
+	async fetch(href: any): Promise<any> {
 		try {
 			let retryAttempts = 0;
 
-			const retry = async () => {
+			const retry: () => string[] | Promise<this> = async () => {
 				try {
 					const resps = await axios.get(href);
 					const parse = new Parse(resps.data);
@@ -93,13 +105,13 @@ class Spider {
 					const { data, hrefs } = parse.find(this.keys, 'href');
 
 					const originHrefs = hrefs
-						.map(href => this.findOriginHref(href))
+						.map((href: string) => this.findOriginHref(href))
 						.filter(Boolean);
 
 					this.subscriber.next({ href, data });
 
 					return originHrefs;
-				} catch (error) {
+				} catch (error: any) {
 					if (retryAttempts >= MAX_RETRIES) {
 						throw error;
 					}
@@ -126,7 +138,7 @@ class Spider {
 		}
 	}
 
-	async next(hrefs) {
+	async next(hrefs: string[]) {
 		if (this.isEmpty(hrefs)) {
 			this.subscriber.complete();
 			this.pause();
@@ -134,10 +146,12 @@ class Spider {
 		}
 
 		if (this.processing) {
-			const nextHrefs = await Promise.all(hrefs.map(href => this.fetch(href)));
-			await this.next(...nextHrefs);
+			const nextHrefs: string[] = await Promise.all(
+				hrefs.map(href => this.fetch(href))
+			);
+			await this.next(nextHrefs.flat(1));
 		}
 	}
 }
 
-export { Spider };
+export { Spinney };

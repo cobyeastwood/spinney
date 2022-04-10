@@ -1,7 +1,12 @@
 import { parseDocument } from 'htmlparser2';
 
 export class Parse {
-	constructor(data, options = {}) {
+	root: unknown;
+	memoized: any;
+	adjacency: Map<string, any>;
+	attribs: Set<string>;
+
+	constructor(data: string, options = {}) {
 		this.root = null;
 
 		this.memoized = {};
@@ -11,34 +16,34 @@ export class Parse {
 		this.setUp(data, options);
 	}
 
-	setUp(data, options) {
+	setUp(data: string, options: any) {
 		if (typeof data === 'string') {
 			this.root = parseDocument(data, options);
 		}
 	}
 
-	toArray(data) {
+	toArray(data: any) {
 		if (Array.isArray(data)) {
 			return data;
 		}
 		return [data];
 	}
 
-	fromSet(set) {
+	fromSet(set: Set<string>) {
 		if (set instanceof Set) {
 			return Array.from(set.values());
 		}
 		return [];
 	}
 
-	fromMap(map) {
+	fromMap(map: Map<string, any>) {
 		if (map instanceof Map) {
 			return Array.from(map.values());
 		}
 		return [];
 	}
 
-	memo(keys) {
+	memo(keys: string | string[]) {
 		return this.toArray(keys).filter(key => {
 			if (typeof key !== 'string') {
 				return false;
@@ -52,7 +57,7 @@ export class Parse {
 		});
 	}
 
-	includes(node, key) {
+	includes(node: any, key: string) {
 		if (node.data) {
 			return node.data.toLowerCase().includes(key);
 		}
@@ -68,11 +73,11 @@ export class Parse {
 		return false;
 	}
 
-	transverse(callback = () => {}) {
-		let stack = [this.root];
+	transverse(callback: (node: any) => void) {
+		let stack: any[] = [this.root];
 
 		while (stack.length) {
-			let node = stack.pop();
+			let node: any = stack.pop();
 
 			if (!node) {
 				continue;
@@ -88,11 +93,11 @@ export class Parse {
 		}
 	}
 
-	find(keys, attrib) {
+	find(keys: string | string[], attrib?: any) {
 		const isAttrib = typeof attrib === 'string';
 		const memoizedKeys = this.memo(keys);
 
-		const callback = node => {
+		const callback = (node: any) => {
 			if (isAttrib) {
 				if (node?.attribs?.[attrib]) {
 					this.attribs.add(node.attribs[attrib]);
@@ -112,8 +117,8 @@ export class Parse {
 
 		this.transverse(callback);
 
-		const data = this.fromMap(this.adjacency);
-		const raws = { data: data.flat(1) };
+		const data: any = this.fromMap(this.adjacency);
+		const raws: any = { data: data.flat(1) };
 
 		if (isAttrib) {
 			const attribsKey = attrib.concat('s');

@@ -5,22 +5,25 @@
 	"repository": "git@github.com:cobyeastwood/spiny.git",
 	"author": "cobyeastwood <cobyeastwood@gmail.com>",
 	"license": "MIT",
+	"publishConfig": {
+		"registry": "https://npm.pkg.github.com/@cobyeastwood"
+	},
 	"scripts": {
 		"build": "rollup --config",
 		"test": "jest"
 	},
 	"dependencies": {
-		"@rollup/plugin-commonjs": "^21.0.2",
-		"@rollup/plugin-node-resolve": "^13.1.3",
 		"axios": "^0.26.1",
 		"htmlparser2": "^7.2.0",
-		"rollup": "^2.70.1",
 		"rxjs": "^7.5.5"
 	},
 	"devDependencies": {
 		"@babel/core": "^7.17.8",
 		"@babel/preset-env": "^7.16.11",
 		"babel-jest": "^27.5.1",
+		"rollup": "^2.70.1",
+		"@rollup/plugin-commonjs": "^21.0.2",
+		"@rollup/plugin-node-resolve": "^13.1.3",
 		"jest": "^27.5.1"
 	}
 }

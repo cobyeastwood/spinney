@@ -11,10 +11,10 @@ import {
 } from './types';
 
 export class Parse {
+	private root: Document | DocumentNode;
 	private memoized: Memoized;
 	private adjacency: Map<string, DocumentNode[]>;
-	root: Document | DocumentNode;
-	attribs: Set<string>;
+	private attribs: Set<string>;
 
 	constructor(data: string, options = {}) {
 		this.root = null;

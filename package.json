@@ -1,14 +1,14 @@
 {
 	"name": "spinney",
-	"description": "A fast and powerful web scraping parser.",
+	"description": "A fast and powerful web harvester.",
 	"version": "1.0.0",
 	"author": "cobyeastwood <cobyeastwood@gmail.com>",
 	"license": "MIT",
 	"keywords": [
 		"spinney",
 		"selector",
+		"harvester",
 		"scraper",
-		"parser"
 	],
 	"repository": "git@github.com:cobyeastwood/spinney.git",
 	"directories": {

@@ -3,6 +3,7 @@ import { Observable } from 'rxjs';
 import { Parse } from './Parse';
 
 const MAX_RETRIES = 5;
+const DISALLOWEDS = new Set();
 
 class Spider {
 	private seen: Set<string>;
@@ -44,11 +45,15 @@ class Spider {
 
 		this.keys = this.toArray(keys);
 
+		const { origin } = this.decode(this.href);
+
 		return new Observable(subscriber => {
 			this.subscriber = subscriber;
 
+			this.robotsTxt(origin);
+
 			this.resume();
-			this.next([this.href]);
+			this.next([origin]);
 
 			return () => {
 				this.pause();
@@ -56,12 +61,18 @@ class Spider {
 		});
 	}
 
+	protected decode(href: string): URL {
+		return new URL(href);
+	}
+
 	protected findOriginHref(href: string): string | undefined {
-		const decoded = new URL(this.href);
+		const decoded = this.decode(href);
 
 		if (href.startsWith('/')) {
 			decoded.pathname = href;
 			const originHref = decoded.toString();
+
+			// todo: if in robots.txt
 
 			if (href.indexOf('cdn') !== -1) {
 				return undefined;
@@ -89,6 +100,36 @@ class Spider {
 
 	protected timeout(ms: number): Promise<void> {
 		return new Promise(resolve => setTimeout(resolve, ms));
+	}
+
+	protected async robotsTxt(origin: string): Promise<void> {
+		const resps = await axios.get(origin.concat('/robots.txt'));
+
+		if (resps.status === 200) {
+			const robotsTxt = resps.data.match(/[^\r\n]+/g);
+
+			if (robotsTxt) {
+				let takeNext;
+
+				for (let txt of robotsTxt) {
+					let useragent = '';
+					if ((useragent = txt.match(/^([Uu]ser-agent:) (.+)$/))) {
+						if (useragent.indexOf('*')) {
+							takeNext = true;
+						}
+						continue;
+					}
+
+					if (takeNext) {
+						let disallow = '';
+						if ((disallow = txt.match(/^([Dd]isallow:) (\/.+)$/))) {
+							const idx = disallow.indexOf('/');
+							DISALLOWEDS.add(disallow.slice(idx)[0]);
+						}
+					}
+				}
+			}
+		}
 	}
 
 	private async fetch(href: any): Promise<any> {

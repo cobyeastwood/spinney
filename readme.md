@@ -7,10 +7,10 @@ A fast and powerful web harvester.
 ```javascript
 const { Spider } = require('spinney');
 
-// Register an endpoint to scrape
+// Register an endpoint to harvest
 const spider = new Spider('https://google.com/');
 
-// Begin search process on provided keys
+// Begin extracting process on provided keys
 const observable = spider.spin(['foo', 'bar']);
 
 // Subscribe to key changes

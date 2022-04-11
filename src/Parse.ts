@@ -2,9 +2,7 @@ import { parseDocument } from 'htmlparser2';
 import {
 	Document,
 	DocumentNode,
-	Element,
-	DataNode,
-	NodeWithChildren,
+	NodeElement,
 	Memoized,
 	Stack,
 	Raws,
@@ -67,12 +65,12 @@ export class Parse {
 		return [];
 	}
 
-	protected includes(node: DocumentNode, key: string): boolean {
-		if (node instanceof DataNode && node.data) {
+	protected includes(node: NodeElement, key: string): boolean {
+		if (node.data) {
 			return node.data.toLowerCase().indexOf(key) !== -1;
 		}
 
-		if (node instanceof Element && node.attribs) {
+		if (node.attribs) {
 			for (let attrib in node.attribs) {
 				if ((attrib = node.attribs[attrib])) {
 					return attrib.toLowerCase().indexOf(key) !== -1;
@@ -83,11 +81,11 @@ export class Parse {
 		return false;
 	}
 
-	protected transverse(callback: (node: DocumentNode) => void): void {
+	protected transverse(callback: (node: NodeElement) => void): void {
 		let stack: Stack = [this.root];
 
 		while (stack.length) {
-			const node: DocumentNode = stack.pop() as DocumentNode;
+			const node = stack.pop() as NodeElement;
 
 			if (!node) {
 				continue;
@@ -95,7 +93,7 @@ export class Parse {
 
 			callback(node);
 
-			if (node instanceof NodeWithChildren && node?.children) {
+			if (node && node?.children) {
 				for (let child of node.children) {
 					stack.push(child);
 				}
@@ -103,13 +101,13 @@ export class Parse {
 		}
 	}
 
-	find(keys: string | string[], attrib?: string) {
+	find(keys: string | string[], attrib?: string): Raws {
 		const isAttrib = typeof attrib === 'string';
 		const memoizedKeys = this.memo(keys);
 
-		const callback = (node: DocumentNode) => {
+		const callback = (node: NodeElement) => {
 			if (isAttrib) {
-				if (node instanceof Element && node?.attribs?.[attrib]) {
+				if (node?.attribs?.[attrib]) {
 					this.attribs.add(node.attribs[attrib]);
 				}
 			}
@@ -119,7 +117,7 @@ export class Parse {
 					if (this.adjacency.has(key)) {
 						this.adjacency.set(
 							key,
-							(this.adjacency.get(key) as DocumentNode[]).concat(node)
+							(this.adjacency.get(key) as NodeElement[]).concat(node)
 						);
 					} else {
 						this.adjacency.set(key, [node]);
@@ -130,7 +128,7 @@ export class Parse {
 
 		this.transverse(callback);
 
-		const data: DocumentNode[] = this.fromMap(this.adjacency);
+		const data: NodeElement[] = this.fromMap(this.adjacency);
 		const raws: Raws = {
 			data: data.flat(1),
 		};

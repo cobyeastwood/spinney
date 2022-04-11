@@ -25,16 +25,16 @@ class Spider {
 		return [data];
 	}
 
+	isEmpty(data: any) {
+		return !Array.isArray(data) || data.length === 0;
+	}
+
 	protected resume() {
 		this.processing = true;
 	}
 
 	protected pause() {
 		this.processing = false;
-	}
-
-	protected isEmpty(hrefs: any) {
-		return !Array.isArray(hrefs) || hrefs.length === 0;
 	}
 
 	spin(keys: string | string[]): Observable<any> {
@@ -63,11 +63,11 @@ class Spider {
 			decoded.pathname = href;
 			const originHref = decoded.toString();
 
-			if (href.includes('cdn')) {
+			if (href.indexOf('cdn') !== -1) {
 				return undefined;
 			}
 
-			if (href.includes('assets')) {
+			if (href.indexOf('assets') !== -1) {
 				return undefined;
 			}
 

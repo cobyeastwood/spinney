@@ -103,33 +103,39 @@ class Spider {
 	}
 
 	protected async robotsTxt(origin: string): Promise<void> {
-		const resps = await axios.get(origin.concat('/robots.txt'));
+		try {
+			const resps = await axios.get(origin.concat('/robots.txt'));
 
-		if (resps.status === 200) {
-			const robotsTxt = resps.data.match(/[^\r\n]+/g);
-
-			if (robotsTxt) {
-				let takeNext;
-
-				for (let txt of robotsTxt) {
-					let useragent = '';
-					if ((useragent = txt.match(/^([Uu]ser-agent:) (.+)$/))) {
-						if (useragent.indexOf('*')) {
-							takeNext = true;
+			if (resps.status === 200) {
+				const robotsTxt = resps.data.match(/[^\r\n]+/g);
+	
+				if (robotsTxt) {
+					let takeNext;
+	
+					for (let txt of robotsTxt) {
+						let useragent = '';
+						if ((useragent = txt.match(/^([Uu]ser-agent:) (.+)$/))) {
+							if (useragent.indexOf('*')) {
+								takeNext = true;
+							}
+							continue;
 						}
-						continue;
-					}
-
-					if (takeNext) {
-						let disallow = '';
-						if ((disallow = txt.match(/^([Dd]isallow:) (\/.+)$/))) {
-							const idx = disallow.indexOf('/');
-							DISALLOWEDS.add(disallow.slice(idx)[0]);
+	
+						if (takeNext) {
+							let disallow = '';
+							if ((disallow = txt.match(/^([Dd]isallow:) (\/.+)$/))) {
+								const idx = disallow.indexOf('/');
+								DISALLOWEDS.add(disallow.slice(idx)[0]);
+							}
 						}
 					}
 				}
 			}
+		} catch (error) {
+			this.subscriber.error(error);
+			this.pause();
 		}
+
 	}
 
 	private async fetch(href: any): Promise<any> {

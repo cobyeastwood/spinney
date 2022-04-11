@@ -1,6 +1,6 @@
 ## Spinney
 
-A fast and powerful web scraping parser.
+A fast and powerful web harvester.
 
 ### Basic Example
 

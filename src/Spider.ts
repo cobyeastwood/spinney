@@ -48,7 +48,7 @@ class Spider {
 
 		this.keys = this.toArray(keys);
 
-		const { origin } = this.decode(this.href);
+		const { origin } = new URL(this.href);
 
 		return new Observable(subscriber => {
 			this.subscriber = subscriber;
@@ -64,21 +64,17 @@ class Spider {
 		});
 	}
 
-	protected decode(href: string): URL {
-		return new URL(href);
-	}
-
 	protected findOriginHref(href: string): string | undefined {
-		const decoded = this.decode(href);
+		const decodedURL = new URL(href);
 
 		if (href.startsWith('/')) {
-			decoded.pathname = href;
-			const originHref = decoded.toString();
+			decodedURL.pathname = href;
+			const originHref = decodedURL.toString();
 
 			// todo: if in robots.txt
 
 			if (this.disallows.has(href)) {
-				// do something
+				// todo: check
 			}
 
 			if (href.indexOf('cdn') !== -1) {
@@ -95,7 +91,7 @@ class Spider {
 			}
 		}
 
-		if (href.startsWith(decoded.origin)) {
+		if (href.startsWith(decodedURL.origin)) {
 			if (!this.seen.has(href)) {
 				this.seen.add(href);
 				return href;
@@ -123,6 +119,7 @@ class Spider {
 						const siteMap = text.match(RegularExpression.SiteMap);
 
 						if (siteMap) {
+							// todo: parse
 							this.siteMap = siteMap;
 						}
 

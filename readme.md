@@ -1,17 +1,17 @@
 ## Spinney
 
-A fast and powerful web harvester.
+A fast and nimble web harvester.
 
 ### Basic Example
 
 ```javascript
-const { Spider } = require('spinney');
+const Spinney = require('spinney');
 
 // Register an endpoint to harvest
-const spider = new Spider('https://google.com/');
+const spinney = new Spinney('https://google.com/');
 
 // Begin extracting process on provided keys
-const observable = spider.spin(['foo', 'bar']);
+const observable = spinney.spin(['foo', 'bar']);
 
 // Subscribe to key changes
 const subscription = observable.subscribe({

@@ -4,7 +4,7 @@ import { Parse } from './Parse';
 
 import { MAX_RETRIES, RegularExpression } from './constants';
 
-class Spider {
+export default class Spinney {
 	private disallows: Set<string>;
 	private siteMap: string[];
 	private seen: Set<string>;
@@ -230,5 +230,3 @@ class Spider {
 		}
 	}
 }
-
-export { Spider };

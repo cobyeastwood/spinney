@@ -1,6 +1,6 @@
 {
 	"name": "spinney",
-	"description": "A fast and powerful web harvester.",
+	"description": "A fast and nimble web harvester.",
 	"version": "1.0.0",
 	"author": "cobyeastwood <cobyeastwood@gmail.com>",
 	"license": "MIT",
@@ -14,8 +14,8 @@
 	"directories": {
 		"lib": "lib/"
 	},
-	"main": "lib/index.js",
-	"types": "lib/index.d.ts",
+	"main": "lib/Spinney.js",
+	"types": "lib/Spinney.d.ts",
 	"files": [
 		"lib/**/*"
 	],

@@ -30,7 +30,7 @@ export default class ParseDocument {
 		}
 	}
 
-	private memo(keys: string | string[]): string[] {
+	private addMemoized(keys: string | string[]): string[] {
 		return this.toArray(keys).filter(key => {
 			if (typeof key === 'string') {
 				if (this.memoized[key] === undefined) {
@@ -117,7 +117,7 @@ export default class ParseDocument {
 
 	find(keys: string | string[], attrib?: string): Raws {
 		const isAttribs = typeof attrib === 'string';
-		const memoizedKeys = this.memo(keys);
+		const memoizedKeys = this.addMemoized(keys);
 
 		const callback = (node: NodeElement) => {
 			if (isAttribs) {

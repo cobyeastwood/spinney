@@ -152,12 +152,12 @@ export default class Spinney {
 
 	async getRobotsText(origin: string): Promise<void> {
 		try {
-			const resp = await axios.get(origin.concat('/robots.txt'));
+			const robotsEndpoint = origin.concat('/robots.txt');
+			const resp = await axios.get(robotsEndpoint);
 
 			if (resp.status === 200) {
-				const robotsText = resp.data.match(RegularExpression.NewLine);
-
-				if (robotsText) {
+				let robotsText;
+				if ((robotsText = resp.data.match(RegularExpression.NewLine))) {
 					for (let text of robotsText) {
 						this.findSiteMap(text);
 

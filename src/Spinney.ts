@@ -6,25 +6,41 @@ import { Context } from './types';
 import { MAX_RETRIES, RegularExpression } from './constants';
 
 export default class Spinney {
-	private disallows: Set<string>;
 	private isSiteMap: boolean;
 	private siteMap: string;
+	private isProcessing: boolean;
+	private takeDisallow: boolean;
+	private disallows: Set<string>;
 	private seen: Set<string>;
 	private subscriber: any;
-	private processing: boolean | undefined;
 	private href: string;
 	private keys: string[];
-	private takeDisallow: boolean;
 
 	constructor(href: string) {
-		this.takeDisallow = false;
-		this.disallows = new Set();
 		this.isSiteMap = false;
 		this.siteMap = '';
+		this.isProcessing = false;
+		this.takeDisallow = false;
+		this.disallows = new Set();
 		this.seen = new Set();
 		this.href = href;
 		this.subscriber;
 		this.keys = [];
+	}
+
+	async setUp(origin: string = '') {
+		await this.getRobotsText(origin);
+
+		let href;
+
+		if (this.isSiteMap) {
+			href = this.siteMap;
+		} else {
+			href = origin;
+		}
+
+		this.resume();
+		await this.next([href]);
 	}
 
 	toArray(data: any) {
@@ -38,12 +54,12 @@ export default class Spinney {
 		return !Array.isArray(data) || data.length === 0;
 	}
 
-	begin() {
-		this.processing = true;
+	resume() {
+		this.isProcessing = true;
 	}
 
 	pause() {
-		this.processing = false;
+		this.isProcessing = false;
 	}
 
 	spin(keys: string | string[]): Observable<any> {
@@ -55,21 +71,9 @@ export default class Spinney {
 
 		const { origin } = new URL(this.href);
 
-		let href;
-
 		return new Observable(subscriber => {
 			this.subscriber = subscriber;
-
-			this.getRobotsText(origin);
-
-			if (this.isSiteMap) {
-				href = this.siteMap;
-			} else {
-				href = origin;
-			}
-
-			this.begin();
-			this.next([href]);
+			this.setUp(origin);
 
 			return () => {
 				this.pause();
@@ -242,7 +246,7 @@ export default class Spinney {
 			return;
 		}
 
-		if (this.processing) {
+		if (this.isProcessing) {
 			const nextHrefs: string[] = await Promise.all(
 				hrefs.map(href => this.fetch(href))
 			);

@@ -1,3 +1,4 @@
+import { parseStringPromise } from 'xml2js';
 import { parseDocument } from 'htmlparser2';
 import {
 	Document,
@@ -8,14 +9,57 @@ import {
 	Raws,
 } from './types';
 
-export class Parse {
-	private root: Document | DocumentNode;
+type SiteMapOuput = { sitemapindex: { $?: any; sitemap: { loc: string[] } } };
+
+export class ParseXml {
+	private isWaiting: boolean = false;
+	private setUpOutput: SiteMapOuput | null;
+	private setUpPromise: Promise<any>;
+
+	constructor(data: string) {
+		this.setUpOutput = null;
+		this.setUpPromise = this.setUp(data);
+	}
+
+	async setUp(data: string, options = undefined) {
+		this.isWaiting = true;
+
+		return await parseStringPromise(data, options).then(value => {
+			this.setUpOutput = value;
+			this.isWaiting = false;
+		});
+	}
+
+	async find(): Promise<{ data: string[] }> {
+		if (this.isWaiting) {
+			await this.setUpPromise;
+		}
+		return this.findOutput(this.setUpOutput);
+	}
+
+	findOutput(output: any): { data: string[] } {
+		const data: string[] = [];
+
+		if (output?.sitemapindex?.sitemap) {
+			for (let site of output.sitemapindex.sitemap) {
+				if (([site] = site.loc)) {
+					data.push(site);
+				}
+			}
+		}
+
+		return { data };
+	}
+}
+
+export class ParseDocument {
+	private output: Document | DocumentNode;
 	private memoized: Memoized;
 	private adjacency: Map<string, DocumentNode[]>;
 	private attribs: Set<string>;
 
 	constructor(data: string, options = {}) {
-		this.root = null;
+		this.output = null;
 
 		this.memoized = {};
 		this.adjacency = new Map();
@@ -26,21 +70,19 @@ export class Parse {
 
 	private setUp(data: string, options: any): void {
 		if (typeof data === 'string') {
-			this.root = parseDocument(data, options) as Document;
+			this.output = parseDocument(data, options) as Document;
 		}
 	}
 
 	private memo(keys: string | string[]): string[] {
 		return this.toArray(keys).filter(key => {
-			if (typeof key !== 'string') {
-				return false;
+			if (typeof key === 'string') {
+				if (this.memoized[key] === undefined) {
+					this.memoized[key] = key.toLowerCase();
+				}
+				return true;
 			}
-
-			if (this.memoized[key] === undefined) {
-				this.memoized[key] = key.toLowerCase();
-			}
-
-			return true;
+			return false;
 		});
 	}
 
@@ -82,7 +124,7 @@ export class Parse {
 	}
 
 	transverse(callback: (node: NodeElement) => void): void {
-		let stack: Stack = [this.root];
+		let stack: Stack = [this.output];
 
 		while (stack.length) {
 			const node = stack.pop() as NodeElement;
@@ -93,7 +135,7 @@ export class Parse {
 
 			callback(node);
 
-			if (node && node?.children) {
+			if (node?.children) {
 				for (let child of node.children) {
 					stack.push(child);
 				}

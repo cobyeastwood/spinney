@@ -1,6 +1,6 @@
 import axios from 'axios'; // replace with npm follow-redirects?
 import { Observable } from 'rxjs';
-import { Parse } from './Parse';
+import { ParseDocument } from './Parse';
 
 import { MAX_RETRIES, RegularExpression } from './constants';
 
@@ -175,7 +175,7 @@ export default class Spinney {
 			const retry: () => Promise<this | any[] | undefined> = async () => {
 				try {
 					const resps = await axios.get(href);
-					const parse = new Parse(resps.data);
+					const parse = new ParseDocument(resps.data);
 
 					if (this.siteMap) {
 						const { data } = parse.find(this.keys);

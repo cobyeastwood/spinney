@@ -21,7 +21,7 @@ export class ParseXml {
 		this.setUpPromise = this.setUp(data);
 	}
 
-	async setUp(data: string, options = undefined) {
+	private async setUp(data: string, options = undefined) {
 		this.isWaiting = true;
 
 		return await parseStringPromise(data, options).then(value => {
@@ -30,14 +30,7 @@ export class ParseXml {
 		});
 	}
 
-	async find(): Promise<Site> {
-		if (this.isWaiting) {
-			await this.setUpPromise;
-		}
-		return this.findSite(this.setUpOutput);
-	}
-
-	findSite(output: SiteMapOuput): Site {
+	private _findHrefs(output: SiteMapOuput): Site {
 		const hrefs: string[] = [];
 
 		if (output?.sitemapindex?.sitemap) {
@@ -50,6 +43,13 @@ export class ParseXml {
 		}
 
 		return { hrefs };
+	}
+
+	async findHrefs(): Promise<Site> {
+		if (this.isWaiting) {
+			await this.setUpPromise;
+		}
+		return this._findHrefs(this.setUpOutput);
 	}
 }
 

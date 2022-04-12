@@ -192,7 +192,7 @@ export default class Spinney {
 					const context: Context = {};
 
 					if (this.isSiteMap) {
-						const xml = await new ParseXml(resp.data).find();
+						const xml = await new ParseXml(resp.data).findHrefs();
 						const doc = new ParseDocument(resp.data).find(this.keys);
 
 						context.hrefs = xml.hrefs;

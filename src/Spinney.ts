@@ -1,6 +1,7 @@
 import axios from 'axios'; // replace with npm follow-redirects?
 import { Observable } from 'rxjs';
-import { ParseXml, ParseDocument } from './Parse';
+import ParseXML from './ParseXML';
+import ParseDocument from './ParseDocument';
 
 import { Context } from './types';
 import { MAX_RETRIES, RegularExpression } from './constants';
@@ -191,7 +192,7 @@ export default class Spinney {
 					const resp = await axios.get(href);
 
 					if (this.isSiteMap) {
-						const xml = await new ParseXml(resp.data).findHrefs();
+						const xml = await new ParseXML(resp.data).findHrefs();
 						const doc = new ParseDocument(resp.data).find(this.keys);
 
 						context.hrefs = xml.hrefs;

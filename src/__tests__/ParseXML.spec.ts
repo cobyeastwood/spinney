@@ -1,20 +1,8 @@
-import { ParseDocument, ParseXml } from '../Parse';
+import ParseXML from '../ParseXML';
 
-describe('ParseDocument class', () => {
-	it('should find a string in parsed output', () => {
-		const parse = new ParseDocument(
-			`<span style="font-size:15px;"><span style="font-size:15px;">-THE MISSION IS OURS-</span></p></span></p><span style="font-size:15px;">-THE MISSION IS OURS-</span></p>`
-		);
-
-		const { data } = parse.find('mission');
-
-		expect(Boolean(data.length)).toEqual(true);
-	});
-});
-
-describe('ParseXml class', () => {
+describe('ParseXML class', () => {
 	it('should find urls in parsed output', async () => {
-		const parse = new ParseXml(
+		const parse = new ParseXML(
 			`<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 			<!-- This is the parent sitemap linking to additional sitemaps for products, collections and pages as shown below. The sitemap can not be edited manually, but is kept up to date in real time. -->
 			<sitemap>

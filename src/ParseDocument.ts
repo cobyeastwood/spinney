@@ -1,59 +1,14 @@
-import { parseStringPromise } from 'xml2js';
 import { parseDocument } from 'htmlparser2';
 import {
 	Document,
 	DocumentNode,
 	NodeElement,
 	Memoized,
-	Site,
-	SiteMapOuput,
 	Stack,
 	Raws,
 } from './types';
 
-export class ParseXml {
-	private isWaiting: boolean = false;
-	private setUpOutput: SiteMapOuput;
-	private setUpPromise: Promise<any>;
-
-	constructor(data: string) {
-		this.setUpOutput;
-		this.setUpPromise = this.setUp(data);
-	}
-
-	private async setUp(data: string, options = undefined) {
-		this.isWaiting = true;
-
-		return await parseStringPromise(data, options).then(value => {
-			this.setUpOutput = value;
-			this.isWaiting = false;
-		});
-	}
-
-	private _findHrefs(output: SiteMapOuput): Site {
-		const hrefs: string[] = [];
-
-		if (output?.sitemapindex?.sitemap) {
-			for (let site of output.sitemapindex.sitemap) {
-				let href;
-				if (([href] = site.loc)) {
-					hrefs.push(href);
-				}
-			}
-		}
-
-		return { hrefs };
-	}
-
-	async findHrefs(): Promise<Site> {
-		if (this.isWaiting) {
-			await this.setUpPromise;
-		}
-		return this._findHrefs(this.setUpOutput);
-	}
-}
-
-export class ParseDocument {
+export default class ParseDocument {
 	private setUpOutput: Document | DocumentNode;
 	private memoized: Memoized;
 	private adjacency: Map<string, DocumentNode[]>;

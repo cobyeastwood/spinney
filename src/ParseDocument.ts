@@ -1,5 +1,6 @@
 import { parseDocument } from 'htmlparser2';
 import {
+	Callback,
 	Document,
 	DocumentNode,
 	NodeElement,
@@ -79,7 +80,7 @@ export default class ParseDocument {
 		return false;
 	}
 
-	depthSearch(callback: (node: NodeElement) => void): void {
+	depthSearch(callback: Callback): void {
 		let stack: Stack = [this.setUpOutput];
 
 		while (stack.length) {
@@ -99,18 +100,13 @@ export default class ParseDocument {
 		}
 	}
 
-	private _find(callback: (node: NodeElement) => void, attrib?: string): Raws {
+	private _find(callback: Callback): Raws {
 		this.depthSearch(callback);
 
 		const data = this.fromMap(this.adjacency);
 		const raws = {
 			data: data.flat(1),
 		} as Raws;
-
-		if (attrib) {
-			const attribsKey = attrib.concat('s');
-			raws[attribsKey] = this.fromSet(this.attribs);
-		}
 
 		return raws;
 	}
@@ -140,6 +136,13 @@ export default class ParseDocument {
 			}
 		};
 
-		return this._find(callback, attrib);
+		const raws = this._find(callback);
+
+		if (isAttribs) {
+			const attribsKey = attrib.concat('s');
+			raws[attribsKey] = this.fromSet(this.attribs);
+		}
+
+		return raws;
 	}
 }

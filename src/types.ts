@@ -1,5 +1,7 @@
 import { NodeWithChildren, Node, Document, Element } from 'domhandler';
 
+type Callback = (node: NodeElement) => void;
+
 type DocumentNode = null | Node | NodeWithChildren | NodeElement | Element;
 type Stack = DocumentNode[];
 type Memoized = { [key: string]: string };
@@ -17,6 +19,7 @@ interface NodeElement extends Element {
 type Context = { hrefs?: string[]; data?: DocumentNode[] };
 
 export {
+	Callback,
 	Context,
 	Document,
 	DocumentNode,

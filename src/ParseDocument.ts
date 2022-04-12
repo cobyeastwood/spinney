@@ -63,7 +63,7 @@ export default class ParseDocument {
 		return [];
 	}
 
-	includes(node: NodeElement, key: string): boolean {
+	hasKey(node: NodeElement, key: string): boolean {
 		if (node.data) {
 			return node.data.toLowerCase().indexOf(key) !== -1;
 		}
@@ -127,7 +127,7 @@ export default class ParseDocument {
 			}
 
 			for (let key of memoizedKeys) {
-				if (this.includes(node, this.memoized[key])) {
+				if (this.hasKey(node, this.memoized[key])) {
 					if (this.adjacency.has(key)) {
 						this.adjacency.set(
 							key,

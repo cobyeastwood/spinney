@@ -8,7 +8,7 @@
 		"spinney",
 		"selector",
 		"harvester",
-		"scraper",
+		"scraper"
 	],
 	"repository": "git@github.com:cobyeastwood/spinney.git",
 	"directories": {

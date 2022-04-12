@@ -1,11 +1,21 @@
-import axios from 'axios';
+import axios from 'axios'; // replace with npm follow-redirects?
 import { Observable } from 'rxjs';
 import { Parse } from './Parse';
 
 const MAX_RETRIES = 5;
 const DISALLOWEDS = new Set();
 
+const RegularExpression = {
+	Allow: /^([Aa]llow:) (\/.+)$/g,
+	Disallow: /^([Dd]isallow:) (\/.+)$/g,
+	Host: /^([Hh]ost:) (.+)$/g,
+	NewLine: /[^\r\n]+/g,
+	SiteMap: /^([Ss]itemap:) (.+)$/,
+	UserAgent: /^([Uu]ser-agent:) (.+)$/g,
+};
+
 class Spider {
+	private siteMap: string[];
 	private seen: Set<string>;
 	private subscriber: any;
 	private processing: boolean | undefined;
@@ -13,6 +23,7 @@ class Spider {
 	private keys: string[];
 
 	constructor(href: string) {
+		this.siteMap = [];
 		this.seen = new Set();
 		this.href = href;
 		this.subscriber;
@@ -50,7 +61,7 @@ class Spider {
 		return new Observable(subscriber => {
 			this.subscriber = subscriber;
 
-			this.robotsTxt(origin);
+			this.getRobotsText(origin);
 
 			this.resume();
 			this.next([origin]);
@@ -73,6 +84,10 @@ class Spider {
 			const originHref = decoded.toString();
 
 			// todo: if in robots.txt
+
+			if (DISALLOWEDS.has(href)) {
+				// do something
+			}
 
 			if (href.indexOf('cdn') !== -1) {
 				return undefined;
@@ -102,30 +117,40 @@ class Spider {
 		return new Promise(resolve => setTimeout(resolve, ms));
 	}
 
-	protected async robotsTxt(origin: string): Promise<void> {
+	protected async getRobotsText(origin: string): Promise<void> {
 		try {
 			const resps = await axios.get(origin.concat('/robots.txt'));
 
 			if (resps.status === 200) {
-				const robotsTxt = resps.data.match(/[^\r\n]+/g);
-	
-				if (robotsTxt) {
-					let takeNext;
-	
-					for (let txt of robotsTxt) {
-						let useragent = '';
-						if ((useragent = txt.match(/^([Uu]ser-agent:) (.+)$/))) {
-							if (useragent.indexOf('*')) {
-								takeNext = true;
+				const robotsText = resps.data.match(RegularExpression.NewLine);
+
+				if (robotsText) {
+					let takeDisallow = false;
+
+					for (let text of robotsText) {
+						const siteMap = text.match(RegularExpression.SiteMap);
+
+						if (siteMap) {
+							this.siteMap = siteMap;
+						}
+
+						let userAgent;
+						if ((userAgent = text.match(RegularExpression.UserAgent))) {
+							const [matchedUserAgent] = userAgent;
+							if (matchedUserAgent.indexOf('*')) {
+								takeDisallow = true;
 							}
 							continue;
 						}
-	
-						if (takeNext) {
-							let disallow = '';
-							if ((disallow = txt.match(/^([Dd]isallow:) (\/.+)$/))) {
-								const idx = disallow.indexOf('/');
-								DISALLOWEDS.add(disallow.slice(idx)[0]);
+
+						if (takeDisallow) {
+							let disallow;
+							if ((disallow = text.match(RegularExpression.Disallow))) {
+								const [matchedDisallow] = disallow;
+								const idx = matchedDisallow.indexOf('/');
+								DISALLOWEDS.add(disallow.slice(idx));
+							} else {
+								takeDisallow = false;
 							}
 						}
 					}
@@ -135,27 +160,32 @@ class Spider {
 			this.subscriber.error(error);
 			this.pause();
 		}
-
 	}
 
-	private async fetch(href: any): Promise<any> {
+	private async fetch(href: string): Promise<any> {
 		try {
 			let retryAttempts = 0;
+
+			const findOriginHrefs = (hrefs: string[]): any[] => {
+				return hrefs
+					.map((href: string) => this.findOriginHref(href))
+					.filter(Boolean);
+			};
 
 			const retry: () => Promise<this | any[] | undefined> = async () => {
 				try {
 					const resps = await axios.get(href);
 					const parse = new Parse(resps.data);
 
-					const { data, hrefs } = parse.find(this.keys, 'href');
-
-					const originHrefs = hrefs
-						.map((href: string) => this.findOriginHref(href))
-						.filter(Boolean);
-
-					this.subscriber.next({ href, data });
-
-					return originHrefs;
+					if (this.siteMap) {
+						const { data } = parse.find(this.keys);
+						this.subscriber.next({ href, data });
+						return findOriginHrefs(this.siteMap);
+					} else {
+						const { data, hrefs } = parse.find(this.keys, 'href');
+						this.subscriber.next({ href, data });
+						return findOriginHrefs(hrefs);
+					}
 				} catch (error: any) {
 					if (retryAttempts >= MAX_RETRIES) {
 						throw error;

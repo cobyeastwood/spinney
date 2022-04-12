@@ -12,8 +12,8 @@ export default class Spinney {
 	private takeDisallow: boolean;
 	private disallows: Set<string>;
 	private seen: Set<string>;
+	private decodedURL: URL;
 	private subscriber: any;
-	private href: string;
 	private keys: string[];
 
 	constructor(href: string) {
@@ -23,20 +23,20 @@ export default class Spinney {
 		this.takeDisallow = false;
 		this.disallows = new Set();
 		this.seen = new Set();
-		this.href = href;
+		this.decodedURL = new URL(href);
 		this.subscriber;
 		this.keys = [];
 	}
 
-	async setUp(origin: string): Promise<void> {
-		await this.getRobotsText(origin);
+	async setUp(): Promise<void> {
+		await this.getRobotsText(this.decodedURL.origin);
 
 		let href;
 
 		if (this.isSiteMap) {
 			href = this.siteMap;
 		} else {
-			href = origin;
+			href = this.decodedURL.origin;
 		}
 
 		this.resume();
@@ -69,11 +69,9 @@ export default class Spinney {
 
 		this.keys = this.toArray(keys);
 
-		const { origin } = new URL(this.href);
-
 		return new Observable(subscriber => {
 			this.subscriber = subscriber;
-			this.setUp(origin);
+			this.setUp();
 
 			return () => {
 				this.pause();
@@ -87,8 +85,6 @@ export default class Spinney {
 		if (href.startsWith('/')) {
 			decodedURL.pathname = href;
 			const originHref = decodedURL.toString();
-
-			// todo: if in robots.txt
 
 			if (this.disallows.has(href)) {
 				return undefined;

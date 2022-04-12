@@ -79,7 +79,7 @@ export default class ParseDocument {
 		return false;
 	}
 
-	transverse(callback: (node: NodeElement) => void): void {
+	depthSearch(callback: (node: NodeElement) => void): void {
 		let stack: Stack = [this.setUpOutput];
 
 		while (stack.length) {
@@ -100,7 +100,7 @@ export default class ParseDocument {
 	}
 
 	private _find(callback: (node: NodeElement) => void, attrib?: string): Raws {
-		this.transverse(callback);
+		this.depthSearch(callback);
 
 		const data = this.fromMap(this.adjacency);
 		const raws = {

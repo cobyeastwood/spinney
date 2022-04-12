@@ -38,7 +38,7 @@ export default class Spinney {
 		return !Array.isArray(data) || data.length === 0;
 	}
 
-	resume() {
+	begin() {
 		this.processing = true;
 	}
 
@@ -55,14 +55,12 @@ export default class Spinney {
 
 		const { origin } = new URL(this.href);
 
+		let href;
+
 		return new Observable(subscriber => {
 			this.subscriber = subscriber;
 
 			this.getRobotsText(origin);
-
-			this.resume();
-
-			let href;
 
 			if (this.isSiteMap) {
 				href = this.siteMap;
@@ -70,6 +68,7 @@ export default class Spinney {
 				href = origin;
 			}
 
+			this.begin();
 			this.next([href]);
 
 			return () => {
@@ -88,7 +87,7 @@ export default class Spinney {
 			// todo: if in robots.txt
 
 			if (this.disallows.has(href)) {
-				// todo: check
+				return undefined;
 			}
 
 			if (href.indexOf('cdn') !== -1) {

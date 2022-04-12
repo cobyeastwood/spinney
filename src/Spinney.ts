@@ -1,12 +1,14 @@
 import axios from 'axios'; // replace with npm follow-redirects?
 import { Observable } from 'rxjs';
-import { ParseDocument } from './Parse';
+import { ParseXml, ParseDocument } from './Parse';
 
+import { Context } from './types';
 import { MAX_RETRIES, RegularExpression } from './constants';
 
 export default class Spinney {
 	private disallows: Set<string>;
-	private siteMap: string[];
+	private isSiteMap: boolean;
+	private siteMap: string;
 	private seen: Set<string>;
 	private subscriber: any;
 	private processing: boolean | undefined;
@@ -17,7 +19,8 @@ export default class Spinney {
 	constructor(href: string) {
 		this.takeDisallow = false;
 		this.disallows = new Set();
-		this.siteMap = [];
+		this.isSiteMap = false;
+		this.siteMap = '';
 		this.seen = new Set();
 		this.href = href;
 		this.subscriber;
@@ -58,7 +61,16 @@ export default class Spinney {
 			this.getRobotsText(origin);
 
 			this.resume();
-			this.next([origin]);
+
+			let href;
+
+			if (this.isSiteMap) {
+				href = this.siteMap;
+			} else {
+				href = origin;
+			}
+
+			this.next([href]);
 
 			return () => {
 				this.pause();
@@ -104,11 +116,13 @@ export default class Spinney {
 	}
 
 	findSiteMap(text: string): void {
-		const siteMap = text.match(RegularExpression.SiteMap);
+		let siteMap;
 
-		if (siteMap) {
-			// todo: parse
-			this.siteMap = siteMap;
+		if ((siteMap = text.match(RegularExpression.SiteMap))) {
+			const [matchedSiteMap] = siteMap;
+			const index = matchedSiteMap.indexOf('/');
+			this.siteMap = matchedSiteMap.slice(index);
+			this.isSiteMap = true;
 		}
 	}
 
@@ -129,8 +143,8 @@ export default class Spinney {
 			let disallow;
 			if ((disallow = text.match(RegularExpression.Disallow))) {
 				const [matchedDisallow] = disallow;
-				const idx = matchedDisallow.indexOf('/');
-				this.disallows.add(matchedDisallow.slice(idx));
+				const index = matchedDisallow.indexOf('/');
+				this.disallows.add(matchedDisallow.slice(index));
 			} else {
 				this.takeDisallow = false;
 			}
@@ -139,10 +153,10 @@ export default class Spinney {
 
 	async getRobotsText(origin: string): Promise<void> {
 		try {
-			const resps = await axios.get(origin.concat('/robots.txt'));
+			const resp = await axios.get(origin.concat('/robots.txt'));
 
-			if (resps.status === 200) {
-				const robotsText = resps.data.match(RegularExpression.NewLine);
+			if (resp.status === 200) {
+				const robotsText = resp.data.match(RegularExpression.NewLine);
 
 				if (robotsText) {
 					for (let text of robotsText) {
@@ -174,18 +188,25 @@ export default class Spinney {
 
 			const retry: () => Promise<this | any[] | undefined> = async () => {
 				try {
-					const resps = await axios.get(href);
-					const parse = new ParseDocument(resps.data);
+					const resp = await axios.get(href);
 
-					if (this.siteMap) {
-						const { data } = parse.find(this.keys);
-						this.subscriber.next({ href, data });
-						return findOriginHrefs(this.siteMap);
+					const context: Context = {};
+
+					if (this.isSiteMap) {
+						const xml = await new ParseXml(resp.data).find();
+						const doc = new ParseDocument(resp.data).find(this.keys);
+
+						context.hrefs = xml.hrefs;
+						context.data = doc.data;
 					} else {
-						const { data, hrefs } = parse.find(this.keys, 'href');
-						this.subscriber.next({ href, data });
-						return findOriginHrefs(hrefs);
+						const doc = new ParseDocument(resp.data).find(this.keys, 'href');
+
+						context.hrefs = doc.hrefs;
+						context.data = doc.data;
 					}
+
+					this.subscriber.next(context);
+					return findOriginHrefs(context.hrefs);
 				} catch (error: any) {
 					if (retryAttempts >= MAX_RETRIES) {
 						throw error;

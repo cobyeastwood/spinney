@@ -5,19 +5,19 @@ import {
 	DocumentNode,
 	NodeElement,
 	Memoized,
+	Site,
+	SiteMapOuput,
 	Stack,
 	Raws,
 } from './types';
 
-type SiteMapOuput = { sitemapindex: { $?: any; sitemap: { loc: string[] } } };
-
 export class ParseXml {
 	private isWaiting: boolean = false;
-	private setUpOutput: SiteMapOuput | null;
+	private setUpOutput: SiteMapOuput;
 	private setUpPromise: Promise<any>;
 
 	constructor(data: string) {
-		this.setUpOutput = null;
+		this.setUpOutput;
 		this.setUpPromise = this.setUp(data);
 	}
 
@@ -30,25 +30,26 @@ export class ParseXml {
 		});
 	}
 
-	async find(): Promise<{ data: string[] }> {
+	async find(): Promise<Site> {
 		if (this.isWaiting) {
 			await this.setUpPromise;
 		}
-		return this.findOutput(this.setUpOutput);
+		return this.findSite(this.setUpOutput);
 	}
 
-	findOutput(output: any): { data: string[] } {
-		const data: string[] = [];
+	findSite(output: SiteMapOuput): Site {
+		const hrefs: string[] = [];
 
 		if (output?.sitemapindex?.sitemap) {
 			for (let site of output.sitemapindex.sitemap) {
-				if (([site] = site.loc)) {
-					data.push(site);
+				let href;
+				if (([href] = site.loc)) {
+					hrefs.push(href);
 				}
 			}
 		}
 
-		return { data };
+		return { hrefs };
 	}
 }
 

@@ -5,16 +5,26 @@ type Stack = DocumentNode[];
 type Memoized = { [key: string]: string };
 type Raws = { data: DocumentNode[]; [key: string]: any[] };
 
+type Site = { hrefs: string[] };
+type SiteMapOuput =
+	| { sitemapindex: { $?: any; sitemap: Array<{ loc: string[] }> } }
+	| undefined;
+
 interface NodeElement extends Element {
 	data?: string;
 }
 
+type Context = { hrefs?: string[]; data?: DocumentNode[] };
+
 export {
+	Context,
 	Document,
 	DocumentNode,
 	Element,
 	NodeElement,
 	NodeWithChildren,
+	Site,
+	SiteMapOuput,
 	Stack,
 	Memoized,
 	Raws,

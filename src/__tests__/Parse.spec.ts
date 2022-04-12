@@ -32,8 +32,8 @@ describe('ParseXml class', () => {
 		  </sitemapindex>`
 		);
 
-		const { data } = await parse.find();
+		const { hrefs } = await parse.find();
 
-		expect(Boolean(data.length)).toEqual(true);
+		expect(Boolean(hrefs.length)).toEqual(true);
 	});
 });

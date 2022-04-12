@@ -54,13 +54,13 @@ export class ParseXml {
 }
 
 export class ParseDocument {
-	private output: Document | DocumentNode;
+	private setUpOutput: Document | DocumentNode;
 	private memoized: Memoized;
 	private adjacency: Map<string, DocumentNode[]>;
 	private attribs: Set<string>;
 
 	constructor(data: string, options = {}) {
-		this.output = null;
+		this.setUpOutput = null;
 
 		this.memoized = {};
 		this.adjacency = new Map();
@@ -71,7 +71,7 @@ export class ParseDocument {
 
 	private setUp(data: string, options: any): void {
 		if (typeof data === 'string') {
-			this.output = parseDocument(data, options) as Document;
+			this.setUpOutput = parseDocument(data, options) as Document;
 		}
 	}
 
@@ -125,7 +125,7 @@ export class ParseDocument {
 	}
 
 	transverse(callback: (node: NodeElement) => void): void {
-		let stack: Stack = [this.output];
+		let stack: Stack = [this.setUpOutput];
 
 		while (stack.length) {
 			const node = stack.pop() as NodeElement;
@@ -144,12 +144,28 @@ export class ParseDocument {
 		}
 	}
 
+	_find(callback: (node: NodeElement) => void, attrib?: string): Raws {
+		this.transverse(callback);
+
+		const data = this.fromMap(this.adjacency);
+		const raws = {
+			data: data.flat(1),
+		} as Raws;
+
+		if (attrib) {
+			const attribsKey = attrib.concat('s');
+			raws[attribsKey] = this.fromSet(this.attribs);
+		}
+
+		return raws;
+	}
+
 	find(keys: string | string[], attrib?: string): Raws {
-		const isAttrib = typeof attrib === 'string';
+		const isAttribs = typeof attrib === 'string';
 		const memoizedKeys = this.memo(keys);
 
 		const callback = (node: NodeElement) => {
-			if (isAttrib) {
+			if (isAttribs) {
 				if (node?.attribs?.[attrib]) {
 					this.attribs.add(node.attribs[attrib]);
 				}
@@ -169,18 +185,6 @@ export class ParseDocument {
 			}
 		};
 
-		this.transverse(callback);
-
-		const data: NodeElement[] = this.fromMap(this.adjacency);
-		const raws: Raws = {
-			data: data.flat(1),
-		};
-
-		if (isAttrib) {
-			const attribsKey = attrib.concat('s');
-			raws[attribsKey] = this.fromSet(this.attribs);
-		}
-
-		return raws;
+		return this._find(callback, attrib);
 	}
 }

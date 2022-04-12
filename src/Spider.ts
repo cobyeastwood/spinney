@@ -12,8 +12,10 @@ class Spider {
 	private processing: boolean | undefined;
 	private href: string;
 	private keys: string[];
+	private takeDisallow: boolean;
 
 	constructor(href: string) {
+		this.takeDisallow = false;
 		this.disallows = new Set();
 		this.siteMap = [];
 		this.seen = new Set();
@@ -33,11 +35,11 @@ class Spider {
 		return !Array.isArray(data) || data.length === 0;
 	}
 
-	protected resume() {
+	resume() {
 		this.processing = true;
 	}
 
-	protected pause() {
+	pause() {
 		this.processing = false;
 	}
 
@@ -64,7 +66,7 @@ class Spider {
 		});
 	}
 
-	protected findOriginHref(href: string): string | undefined {
+	findOriginHref(href: string): string | undefined {
 		const decodedURL = new URL(href);
 
 		if (href.startsWith('/')) {
@@ -101,11 +103,41 @@ class Spider {
 		return undefined;
 	}
 
-	protected timeout(ms: number): Promise<void> {
-		return new Promise(resolve => setTimeout(resolve, ms));
+	findSiteMap(text: string): void {
+		const siteMap = text.match(RegularExpression.SiteMap);
+
+		if (siteMap) {
+			// todo: parse
+			this.siteMap = siteMap;
+		}
 	}
 
-	protected async getRobotsText(origin: string): Promise<void> {
+	findUserAgent(text: string): boolean {
+		let userAgent;
+		if ((userAgent = text.match(RegularExpression.UserAgent))) {
+			const [matchedUserAgent] = userAgent;
+			if (matchedUserAgent.indexOf('*')) {
+				this.takeDisallow = true;
+			}
+			return true;
+		}
+		return false;
+	}
+
+	findDisallow(text: string): void {
+		if (this.takeDisallow) {
+			let disallow;
+			if ((disallow = text.match(RegularExpression.Disallow))) {
+				const [matchedDisallow] = disallow;
+				const idx = matchedDisallow.indexOf('/');
+				this.disallows.add(matchedDisallow.slice(idx));
+			} else {
+				this.takeDisallow = false;
+			}
+		}
+	}
+
+	async getRobotsText(origin: string): Promise<void> {
 		try {
 			const resps = await axios.get(origin.concat('/robots.txt'));
 
@@ -113,35 +145,14 @@ class Spider {
 				const robotsText = resps.data.match(RegularExpression.NewLine);
 
 				if (robotsText) {
-					let takeDisallow = false;
-
 					for (let text of robotsText) {
-						const siteMap = text.match(RegularExpression.SiteMap);
+						this.findSiteMap(text);
 
-						if (siteMap) {
-							// todo: parse
-							this.siteMap = siteMap;
-						}
-
-						let userAgent;
-						if ((userAgent = text.match(RegularExpression.UserAgent))) {
-							const [matchedUserAgent] = userAgent;
-							if (matchedUserAgent.indexOf('*')) {
-								takeDisallow = true;
-							}
+						if (this.findUserAgent(text)) {
 							continue;
 						}
 
-						if (takeDisallow) {
-							let disallow;
-							if ((disallow = text.match(RegularExpression.Disallow))) {
-								const [matchedDisallow] = disallow;
-								const idx = matchedDisallow.indexOf('/');
-								this.disallows.add(disallow.slice(idx));
-							} else {
-								takeDisallow = false;
-							}
-						}
+						this.findDisallow(text);
 					}
 				}
 			}
@@ -186,7 +197,9 @@ class Spider {
 								return;
 							default:
 								retryAttempts++;
-								await this.timeout(500);
+								await new Promise(function (resolve) {
+									return setTimeout(resolve, 500);
+								});
 								return await retry();
 						}
 					} else {

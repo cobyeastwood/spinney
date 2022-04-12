@@ -65,7 +65,7 @@ export class Parse {
 		return [];
 	}
 
-	protected includes(node: NodeElement, key: string): boolean {
+	includes(node: NodeElement, key: string): boolean {
 		if (node.data) {
 			return node.data.toLowerCase().indexOf(key) !== -1;
 		}
@@ -81,7 +81,7 @@ export class Parse {
 		return false;
 	}
 
-	protected transverse(callback: (node: NodeElement) => void): void {
+	transverse(callback: (node: NodeElement) => void): void {
 		let stack: Stack = [this.root];
 
 		while (stack.length) {

@@ -2,19 +2,10 @@ import axios from 'axios'; // replace with npm follow-redirects?
 import { Observable } from 'rxjs';
 import { Parse } from './Parse';
 
-const MAX_RETRIES = 5;
-const DISALLOWEDS = new Set();
-
-const RegularExpression = {
-	Allow: /^([Aa]llow:) (\/.+)$/g,
-	Disallow: /^([Dd]isallow:) (\/.+)$/g,
-	Host: /^([Hh]ost:) (.+)$/g,
-	NewLine: /[^\r\n]+/g,
-	SiteMap: /^([Ss]itemap:) (.+)$/,
-	UserAgent: /^([Uu]ser-agent:) (.+)$/g,
-};
+import { MAX_RETRIES, RegularExpression } from './constants';
 
 class Spider {
+	private disallows: Set<string>;
 	private siteMap: string[];
 	private seen: Set<string>;
 	private subscriber: any;
@@ -23,6 +14,7 @@ class Spider {
 	private keys: string[];
 
 	constructor(href: string) {
+		this.disallows = new Set();
 		this.siteMap = [];
 		this.seen = new Set();
 		this.href = href;
@@ -85,7 +77,7 @@ class Spider {
 
 			// todo: if in robots.txt
 
-			if (DISALLOWEDS.has(href)) {
+			if (this.disallows.has(href)) {
 				// do something
 			}
 
@@ -148,7 +140,7 @@ class Spider {
 							if ((disallow = text.match(RegularExpression.Disallow))) {
 								const [matchedDisallow] = disallow;
 								const idx = matchedDisallow.indexOf('/');
-								DISALLOWEDS.add(disallow.slice(idx));
+								this.disallows.add(disallow.slice(idx));
 							} else {
 								takeDisallow = false;
 							}

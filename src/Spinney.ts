@@ -28,7 +28,8 @@ export default class Spinney {
 		this.keys = [];
 	}
 
-	async setUp(origin: string = '') {
+	async setUp(): Promise<void> {
+		const { origin } = new URL(this.href);
 		await this.getRobotsText(origin);
 
 		let href;
@@ -69,12 +70,9 @@ export default class Spinney {
 
 		this.keys = this.toArray(keys);
 
-		const { origin } = new URL(this.href);
-
 		return new Observable(subscriber => {
 			this.subscriber = subscriber;
-			this.setUp(origin);
-
+			this.setUp();
 			return () => {
 				this.pause();
 			};

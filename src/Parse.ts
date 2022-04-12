@@ -144,7 +144,7 @@ export class ParseDocument {
 		}
 	}
 
-	_find(callback: (node: NodeElement) => void, attrib?: string): Raws {
+	private _find(callback: (node: NodeElement) => void, attrib?: string): Raws {
 		this.transverse(callback);
 
 		const data = this.fromMap(this.adjacency);

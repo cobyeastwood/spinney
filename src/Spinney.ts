@@ -79,7 +79,7 @@ export default class Spinney {
 		});
 	}
 
-	findOriginHref(href: string): string | undefined {
+	extractOriginHref(href: string): string | undefined {
 		const decodedURL = new URL(href);
 
 		if (href.startsWith('/')) {
@@ -116,7 +116,6 @@ export default class Spinney {
 
 	findSiteMap(text: string): void {
 		let siteMap;
-
 		if ((siteMap = text.match(RegularExpression.SiteMap))) {
 			const [matchedSiteMap] = siteMap;
 			const index = matchedSiteMap.indexOf('/');
@@ -179,17 +178,17 @@ export default class Spinney {
 		try {
 			let retryAttempts = 0;
 
-			const findOriginHrefs = (hrefs: string[]): any[] => {
+			const extractOriginHrefs = (hrefs: string[]): any[] => {
 				return hrefs
-					.map((href: string) => this.findOriginHref(href))
+					.map((href: string) => this.extractOriginHref(href))
 					.filter(Boolean);
 			};
+
+			const context: Context = {};
 
 			const retry: () => Promise<this | any[] | undefined> = async () => {
 				try {
 					const resp = await axios.get(href);
-
-					const context: Context = {};
 
 					if (this.isSiteMap) {
 						const xml = await new ParseXml(resp.data).findHrefs();
@@ -205,7 +204,7 @@ export default class Spinney {
 					}
 
 					this.subscriber.next(context);
-					return findOriginHrefs(context.hrefs);
+					return extractOriginHrefs(context.hrefs);
 				} catch (error: any) {
 					if (retryAttempts >= MAX_RETRIES) {
 						throw error;

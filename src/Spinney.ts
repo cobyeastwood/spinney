@@ -29,6 +29,21 @@ export default class Spinney {
 		this.keys = [];
 	}
 
+	private async _setUp(hrefs: string[]): Promise<void> {
+		if (this.isEmpty(hrefs)) {
+			this.subscriber.complete();
+			this.pause();
+			return;
+		}
+
+		if (this.isProcessing) {
+			const nextHrefs: string[] = await Promise.all(
+				hrefs.map(href => this.fetch(href))
+			);
+			await this._setUp(nextHrefs.flat(1));
+		}
+	}
+
 	async setUp(): Promise<void> {
 		await this.getRobotsText(this.decodedURL.origin);
 
@@ -41,26 +56,26 @@ export default class Spinney {
 		}
 
 		this.resume();
-		await this.next([href]);
+		await this._setUp([href]);
 	}
 
-	toArray(data: any) {
+	resume(): void {
+		this.isProcessing = true;
+	}
+
+	pause(): void {
+		this.isProcessing = false;
+	}
+
+	toArray(data: any): any[] {
 		if (Array.isArray(data)) {
 			return data;
 		}
 		return [data];
 	}
 
-	isEmpty(data: any) {
+	isEmpty(data: any): boolean {
 		return !Array.isArray(data) || data.length === 0;
-	}
-
-	resume() {
-		this.isProcessing = true;
-	}
-
-	pause() {
-		this.isProcessing = false;
 	}
 
 	spin(keys: string | string[]): Observable<any> {
@@ -232,21 +247,6 @@ export default class Spinney {
 		} catch (error) {
 			this.subscriber.error(error);
 			this.pause();
-		}
-	}
-
-	private async next(hrefs: string[]): Promise<void> {
-		if (this.isEmpty(hrefs)) {
-			this.subscriber.complete();
-			this.pause();
-			return;
-		}
-
-		if (this.isProcessing) {
-			const nextHrefs: string[] = await Promise.all(
-				hrefs.map(href => this.fetch(href))
-			);
-			await this.next(nextHrefs.flat(1));
 		}
 	}
 }

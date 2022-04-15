@@ -14,8 +14,8 @@
 	"directories": {
 		"lib": "lib/"
 	},
-	"main": "lib/Spinney.js",
-	"types": "lib/Spinney.d.ts",
+	"main": "lib/index.js",
+	"types": "lib/index.d.ts",
 	"files": [
 		"lib/**/*"
 	],

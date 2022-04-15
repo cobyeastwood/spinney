@@ -4,14 +4,14 @@ import ParseXML from './ParseXML';
 import ParseDocument from './ParseDocument';
 
 import { Context } from './types';
-import { MAX_RETRIES, RegularExpression } from './constants';
+import { MAX_RETRIES, RegularExpression, Attribute } from './constants';
 
 export default class Spinney {
 	private isSiteMap: boolean;
 	private siteMap: string;
 	private isProcessing: boolean;
 	private takeDisallow: boolean;
-	private disallows: Set<string>;
+	private noPaths: Set<string>;
 	private seen: Set<string>;
 	private decodedURL: URL;
 	private subscriber: any;
@@ -22,7 +22,7 @@ export default class Spinney {
 		this.siteMap = '';
 		this.isProcessing = false;
 		this.takeDisallow = false;
-		this.disallows = new Set();
+		this.noPaths = new Set();
 		this.seen = new Set();
 		this.decodedURL = new URL(href);
 		this.subscriber;
@@ -95,6 +95,32 @@ export default class Spinney {
 		});
 	}
 
+	getRegExp(pathname: string): RegExp {
+		return new RegExp(`(.*\.)?${this.decodedURL.hostname}.*(${pathname})`);
+	}
+
+	isMatch(testPathName: string, basePathName: string) {
+		let pathName;
+		if ((pathName = testPathName.match(RegularExpression.ForwardSlashWord))) {
+			const [matchedPathName] = pathName;
+			const index = matchedPathName.indexOf('/');
+			if (index === -1) {
+				return this.getRegExp(matchedPathName).test(basePathName);
+			}
+			return this.getRegExp(matchedPathName.slice(index)).test(basePathName);
+		}
+		return false;
+	}
+
+	checkIsMatch(href: string): boolean {
+		for (const noPath of this.noPaths) {
+			if (this.isMatch(noPath, href)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	extractOriginHref(href: string): string | undefined {
 		const decodedURL = new URL(href);
 
@@ -102,27 +128,29 @@ export default class Spinney {
 			decodedURL.pathname = href;
 			const originHref = decodedURL.toString();
 
-			if (this.disallows.has(href)) {
-				return undefined;
-			}
-
-			if (href.indexOf('cdn') !== -1) {
-				return undefined;
-			}
-
-			if (href.indexOf('assets') !== -1) {
-				return undefined;
-			}
-
 			if (!this.seen.has(originHref)) {
 				this.seen.add(originHref);
+
+				if (this.checkIsMatch(href)) {
+					return undefined;
+				}
+
 				return originHref;
 			}
 		}
 
 		if (href.startsWith(decodedURL.origin)) {
+			if (!href.match(RegularExpression.HttpOrHttps)) {
+				return undefined;
+			}
+
 			if (!this.seen.has(href)) {
 				this.seen.add(href);
+
+				if (this.checkIsMatch(href)) {
+					return undefined;
+				}
+
 				return href;
 			}
 		}
@@ -134,7 +162,7 @@ export default class Spinney {
 		let siteMap;
 		if ((siteMap = text.match(RegularExpression.SiteMap))) {
 			const [matchedSiteMap] = siteMap;
-			const index = matchedSiteMap.indexOf('/');
+			const index = matchedSiteMap.indexOf('http');
 			this.siteMap = matchedSiteMap.slice(index);
 			this.isSiteMap = true;
 		}
@@ -158,7 +186,7 @@ export default class Spinney {
 			if ((disallow = text.match(RegularExpression.Disallow))) {
 				const [matchedDisallow] = disallow;
 				const index = matchedDisallow.indexOf('/');
-				this.disallows.add(matchedDisallow.slice(index));
+				this.noPaths.add(matchedDisallow.slice(index));
 			} else {
 				this.takeDisallow = false;
 			}
@@ -213,7 +241,10 @@ export default class Spinney {
 						context.hrefs = xml.hrefs;
 						context.data = doc.data;
 					} else {
-						const doc = new ParseDocument(resp.data).find(this.keys, 'href');
+						const doc = new ParseDocument(resp.data).find(
+							this.keys,
+							Attribute.Href
+						);
 
 						context.hrefs = doc.hrefs;
 						context.data = doc.data;

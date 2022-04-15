@@ -93,7 +93,7 @@ export default class ParseDocument {
 			callback(node);
 
 			if (node?.children) {
-				for (let child of node.children) {
+				for (const child of node.children) {
 					stack.push(child);
 				}
 			}
@@ -122,7 +122,7 @@ export default class ParseDocument {
 				}
 			}
 
-			for (let key of memoizedKeys) {
+			for (const key of memoizedKeys) {
 				if (this.hasKey(node, this.memoized[key])) {
 					if (this.adjacency.has(key)) {
 						this.adjacency.set(

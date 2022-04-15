@@ -196,7 +196,7 @@ export default class Spinney {
 			if (resp.status === 200) {
 				let robotsText;
 				if ((robotsText = resp.data.match(RegularExpression.NewLine))) {
-					for (let text of robotsText) {
+					for (const text of robotsText) {
 						this.findSiteMap(text);
 
 						if (this.findUserAgent(text)) {

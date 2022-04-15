@@ -124,10 +124,7 @@ export default class Spinney {
 	canFetch(href: string): boolean {
 		if (!this.seen.has(href)) {
 			this.seen.add(href);
-
-			if (this.checkIsMatch(href)) {
-				return true;
-			}
+			return this.checkIsMatch(href);
 		}
 		return false;
 	}

@@ -121,41 +121,39 @@ export default class Spinney {
 		return false;
 	}
 
-	extractOriginHref(href: string): string | undefined {
+	canFetch(href: string): boolean {
+		if (!this.seen.has(href)) {
+			this.seen.add(href);
+
+			if (this.checkIsMatch(href)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	isOrigin(href: string): boolean {
 		const decodedURL = new URL(href);
 
 		if (href.startsWith('/')) {
 			decodedURL.pathname = href;
-			const originHref = decodedURL.toString();
-
-			if (!this.seen.has(originHref)) {
-				this.seen.add(originHref);
-
-				if (this.checkIsMatch(href)) {
-					return undefined;
-				}
-
-				return originHref;
-			}
+			return this.canFetch(decodedURL.toString());
 		}
 
 		if (href.startsWith(decodedURL.origin)) {
-			if (!href.match(RegularExpression.HttpOrHttps)) {
-				return undefined;
-			}
-
-			if (!this.seen.has(href)) {
-				this.seen.add(href);
-
-				if (this.checkIsMatch(href)) {
-					return undefined;
-				}
-
-				return href;
-			}
+			return this.canFetch(href);
 		}
 
-		return undefined;
+		return false;
+	}
+
+	getOriginURL(href: string): string {
+		if (href.startsWith('/')) {
+			const decodedURL = new URL(href);
+			decodedURL.pathname = href;
+			return decodedURL.toString();
+		}
+		return href;
 	}
 
 	findSiteMap(text: string): void {
@@ -224,8 +222,8 @@ export default class Spinney {
 
 			const extractOriginHrefs = (hrefs: string[]): any[] => {
 				return hrefs
-					.map((href: string) => this.extractOriginHref(href))
-					.filter(Boolean);
+					.filter(href => this.isOrigin(href))
+					.map(href => this.getOriginURL(href));
 			};
 
 			const context: Context = {};

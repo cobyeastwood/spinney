@@ -16,7 +16,11 @@ export default class Format {
 			}
 
 			const format = node?.data?.split(' ').reduce((acc: any, word: string) => {
-				acc[word] = word;
+				if (acc[word]) {
+					acc[word].push(word);
+				} else {
+					acc[word] = [word];
+				}
 				return acc;
 			}, {});
 

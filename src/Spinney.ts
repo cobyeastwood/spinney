@@ -5,10 +5,11 @@ import ParseDocument from './ParseDocument';
 import ParseText from './ParseText';
 import Format from './Format';
 
-import { NodeElement, Context } from './types';
+import { NodeElement, Context, Options } from './types';
 import { MAX_RETRIES, RegularExpression, Attribute } from './constants';
 
 export default class Spinney {
+	private isOverideOn: boolean;
 	private isSiteMap: boolean;
 	private siteMap: string;
 	private isProcessing: boolean;
@@ -18,7 +19,8 @@ export default class Spinney {
 	private subscriber: any;
 	private keys: string[];
 
-	constructor(href: string) {
+	constructor(href: string, options: Options) {
+		this.isOverideOn = !!options.overide;
 		this.isSiteMap = false;
 		this.siteMap = '';
 		this.isProcessing = false;
@@ -27,6 +29,10 @@ export default class Spinney {
 		this.decodedURL = new URL(href);
 		this.subscriber;
 		this.keys = [];
+	}
+
+	debug(value: any): void {
+		console.log(String(value), value);
 	}
 
 	private async _setUp(hrefs: string[]): Promise<void> {
@@ -111,6 +117,10 @@ export default class Spinney {
 	}
 
 	checkIsMatch(href: string): boolean {
+		if (this.isOverideOn) {
+			return true;
+		}
+
 		for (const noPath of this.noPaths) {
 			if (this.isMatch(noPath, href)) {
 				return true;
@@ -162,8 +172,14 @@ export default class Spinney {
 				let texts;
 				if ((texts = resp.data.match(RegularExpression.NewLine))) {
 					const txt = new ParseText(texts);
+
 					this.isSiteMap = txt.isSiteMap;
 					this.siteMap = txt.href;
+
+					if (this.isOverideOn) {
+						return;
+					}
+
 					this.noPaths = txt.data;
 				}
 			}

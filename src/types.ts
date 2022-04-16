@@ -1,5 +1,7 @@
 import { NodeWithChildren, Node, Document, Element } from 'domhandler';
 
+type Options = { overide?: boolean };
+
 type Callback = (node: NodeElement) => void;
 
 type DocumentNode = null | Node | NodeWithChildren | NodeElement | Element;
@@ -28,6 +30,7 @@ export {
 	Element,
 	NodeElement,
 	NodeWithChildren,
+	Options,
 	SiteMapOuput,
 	Stack,
 	Memoized,

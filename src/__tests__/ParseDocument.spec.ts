@@ -6,8 +6,8 @@ describe('ParseDocument class', () => {
 			`<span style="font-size:15px;"><span style="font-size:15px;">-THE MISSION IS OURS-</span></p></span></p><span style="font-size:15px;">-THE MISSION IS OURS-</span></p>`
 		);
 
-		const { data } = parse.find('mission');
+		const { nodes } = parse.find('mission');
 
-		expect(Boolean(data.length)).toEqual(true);
+		expect(Boolean(nodes.length)).toEqual(true);
 	});
 });

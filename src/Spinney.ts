@@ -5,7 +5,7 @@ import ParseDocument from './ParseDocument';
 import ParseText from './ParseText';
 import Format from './Format';
 
-import { NodeElement, Context, Options } from './types';
+import { Context, Options } from './types';
 import { MAX_RETRIES, RegularExpression, Attribute } from './constants';
 
 export default class Spinney {
@@ -19,8 +19,8 @@ export default class Spinney {
 	private subscriber: any;
 	private keys: string[];
 
-	constructor(href: string, options: Options) {
-		this.isOverideOn = !!options.overide;
+	constructor(href: string, options?: Options) {
+		this.isOverideOn = !!options?.overide;
 		this.isSiteMap = false;
 		this.siteMap = '';
 		this.isProcessing = false;
@@ -218,7 +218,7 @@ export default class Spinney {
 							Attribute.Href
 						);
 						context.hrefs = doc.hrefs;
-						context.nodes = new Format(doc.nodes as NodeElement[]);
+						context.nodes = new Format(doc.nodes).getNodes();
 					}
 
 					this.subscriber.next(context);

@@ -1,6 +1,6 @@
 import ParseXML from '../ParseXML';
 
-describe('ParseXML class', () => {
+xdescribe('ParseXML class', () => {
 	it('should find urls in parsed output', async () => {
 		const parse = new ParseXML(
 			`<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

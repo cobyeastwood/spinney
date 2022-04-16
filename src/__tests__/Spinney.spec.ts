@@ -1,7 +1,7 @@
 import { Observable } from 'rxjs';
 import Spinney from '../Spinney';
 
-describe('Spinney class', () => {
+xdescribe('Spinney class', () => {
 	it('isMatch should see if a provided path matches a RegExp base path', () => {
 		const spinney = new Spinney('https://www.example.com/');
 

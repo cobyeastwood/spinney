@@ -6,13 +6,12 @@ export default class Format {
 	constructor(nodes: NodeElement[]) {
 		this.data = {};
 		this.setUp(nodes);
-		return this.data;
 	}
 
 	setUp(nodes: NodeElement[]) {
 		for (const node of nodes) {
 			if (this.data[node.getId()]) {
-				return;
+				return this.data[node.getId()];
 			}
 
 			const format = node?.data?.split(' ').reduce((acc: any, word: string) => {
@@ -26,6 +25,10 @@ export default class Format {
 
 			this.data[node.getId()] = format;
 		}
+	}
+
+	getNodes() {
+		return this.data;
 	}
 
 	toJSON() {

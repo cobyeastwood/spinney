@@ -2,7 +2,7 @@
 
 rm_node_modules=$1
 
-echo 'begin'
+echo 'cleaning...'
 
 rm -rf lib
 

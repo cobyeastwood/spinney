@@ -7,7 +7,11 @@ describe('Format class', () => {
 			`<span style="font-size:15px;"><span style="font-size:15px;">-THE MISSION IS OURS-</span></p></span></p><span style="font-size:15px;">-THE MISSION IS OURS-</span></p>`
 		).find('mission');
 
-		const nodes = new Format(doc.nodes).getNodes();
+		const nodes = new Format(doc.nodes);
+
+		for (const node in nodes) {
+			console.log(nodes[node]);
+		}
 
 		expect(Object.keys(nodes)).toHaveLength(1);
 	});

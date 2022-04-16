@@ -14,6 +14,7 @@
 	"directories": {
 		"lib": "lib/"
 	},
+	"type": "commonjs",
 	"main": "lib/index.js",
 	"types": "lib/index.d.ts",
 	"files": [
@@ -29,7 +30,11 @@
 	"dependencies": {
 		"axios": "^0.26.1",
 		"htmlparser2": "^7.2.0",
+		"retext": "^8.1.0",
+		"retext-keywords": "^7.1.0",
+		"retext-pos": "^4.1.0",
 		"rxjs": "^7.5.5",
+		"to-vfile": "^7.2.3",
 		"url-pattern": "^1.0.3",
 		"xml2js": "^0.4.23"
 	},

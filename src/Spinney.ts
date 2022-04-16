@@ -8,10 +8,14 @@ import Format from './Format';
 import { Context, Options } from './types';
 import { MAX_RETRIES, RegularExpression, Attribute } from './constants';
 
+function debug(value: any): void {
+	console.log(String(value), value);
+}
+
 export default class Spinney {
 	private isOverideOn: boolean;
-	private isSiteMap: boolean;
-	private siteMap: string;
+	// private isSiteMap: boolean;
+	// private siteMap: string;
 	private isProcessing: boolean;
 	private noPaths: string[];
 	private seen: Set<string>;
@@ -21,18 +25,14 @@ export default class Spinney {
 
 	constructor(href: string, options?: Options) {
 		this.isOverideOn = !!options?.overide;
-		this.isSiteMap = false;
-		this.siteMap = '';
+		// this.isSiteMap = false;
+		// this.siteMap = '';
 		this.isProcessing = false;
 		this.noPaths = [];
 		this.seen = new Set();
 		this.decodedURL = new URL(href);
 		this.subscriber;
 		this.keys = [];
-	}
-
-	debug(value: any): void {
-		console.log(String(value), value);
 	}
 
 	private async _setUp(hrefs: string[]): Promise<void> {
@@ -51,15 +51,15 @@ export default class Spinney {
 	}
 
 	async setUp(): Promise<void> {
-		await this.getText('/robots.txt');
+		// await this.getText('/robots.txt');
 
 		let href;
 
-		if (this.isSiteMap) {
-			href = this.siteMap;
-		} else {
-			href = this.decodedURL.origin;
-		}
+		// if (this.isSiteMap) {
+		// 	href = this.siteMap;
+		// } else {
+		href = this.decodedURL.origin;
+		// }
 
 		this.resume();
 		await this._setUp([href]);
@@ -138,28 +138,49 @@ export default class Spinney {
 	}
 
 	isOrigin(href: string): boolean {
-		const decodedURL = new URL(href);
+		let decodedURL;
 
 		if (href.startsWith('/')) {
+			href = this.getURL(href);
+		}
+
+		try {
+			decodedURL = new URL(href);
+		} catch {
+			return false;
+		}
+
+		if (href.indexOf(decodedURL.hostname) !== -1) {
 			decodedURL.pathname = href;
+			debug(decodedURL);
 			return this.canFetch(decodedURL.toString());
 		}
 
 		if (href.startsWith(decodedURL.origin)) {
+			debug(decodedURL);
 			return this.canFetch(href);
 		}
 
 		return false;
 	}
 
-	setURL(pathname: string): void {
+	setURL(pathname: string): () => void {
 		this.decodedURL.pathname = pathname;
+		return () => {
+			this.decodedURL.pathname = '';
+		};
 	}
 
 	getURL(pathname: string): string {
-		if (pathname.startsWith('/')) {
-			this.setURL(pathname);
-			return this.decodedURL.toString();
+		if (!(typeof pathname === 'string')) {
+			return '';
+		}
+
+		if (pathname.startsWith('/') && pathname[1] !== '/') {
+			const unset = this.setURL(pathname);
+			const inURL = this.decodedURL.toString();
+			unset();
+			return inURL;
 		}
 		return pathname;
 	}
@@ -173,8 +194,8 @@ export default class Spinney {
 				if ((texts = resp.data.match(RegularExpression.NewLine))) {
 					const txt = new ParseText(texts);
 
-					this.isSiteMap = txt.isSiteMap;
-					this.siteMap = txt.href;
+					// this.isSiteMap = txt.isSiteMap;
+					// this.siteMap = txt.href;
 
 					if (this.isOverideOn) {
 						return;

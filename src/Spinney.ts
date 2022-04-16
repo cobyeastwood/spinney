@@ -2,6 +2,7 @@ import axios, { AxiosResponse } from 'axios';
 import { Observable } from 'rxjs';
 import ParseXML from './ParseXML';
 import ParseDocument from './ParseDocument';
+import ParseText from './ParseText';
 import Format from './Format';
 
 import { NodeElement, Context } from './types';
@@ -11,8 +12,7 @@ export default class Spinney {
 	private isSiteMap: boolean;
 	private siteMap: string;
 	private isProcessing: boolean;
-	private takeDisallow: boolean;
-	private noPaths: Set<string>;
+	private noPaths: string[];
 	private seen: Set<string>;
 	private decodedURL: URL;
 	private subscriber: any;
@@ -22,8 +22,7 @@ export default class Spinney {
 		this.isSiteMap = false;
 		this.siteMap = '';
 		this.isProcessing = false;
-		this.takeDisallow = false;
-		this.noPaths = new Set();
+		this.noPaths = [];
 		this.seen = new Set();
 		this.decodedURL = new URL(href);
 		this.subscriber;
@@ -46,7 +45,7 @@ export default class Spinney {
 	}
 
 	async setUp(): Promise<void> {
-		await this.getRobotsText(this.decodedURL.origin);
+		await this.getText(this.decodedURL.origin, '/robots.txt');
 
 		let href;
 
@@ -152,54 +151,17 @@ export default class Spinney {
 		return href;
 	}
 
-	findSiteMap(text: string): void {
-		if (RegularExpression.SiteMap.test(text)) {
-			const index = text.indexOf('http');
-			if (index !== -1) {
-				this.siteMap = text.slice(index);
-				this.isSiteMap = true;
-			}
-		}
-	}
-
-	findUserAgent(text: string): void {
-		if (RegularExpression.UserAgent.test(text)) {
-			if (text.indexOf('*') !== -1) {
-				this.takeDisallow = true;
-			}
-		}
-	}
-
-	findDisallow(text: string): void {
-		if (this.takeDisallow) {
-			if (RegularExpression.Disallow.test(text)) {
-				const index = text.indexOf('/');
-				if (index !== -1) {
-					this.noPaths.add(text.slice(index));
-				}
-			} else {
-				this.takeDisallow = false;
-			}
-		}
-	}
-
-	async getRobotsText(origin: string): Promise<void> {
+	async getText(origin: string, pathname: string): Promise<void> {
 		try {
-			const robotsEndpoint = origin.concat('/robots.txt');
-			const resp: AxiosResponse = await axios.get(robotsEndpoint);
-
-			const findInRobots = (text: string): void => {
-				this.findSiteMap(text);
-				this.findUserAgent(text);
-				this.findDisallow(text);
-			};
+			const endpoint = origin.concat(pathname);
+			const resp: AxiosResponse = await axios.get(endpoint);
 
 			if (resp.status === 200) {
-				let robotsText;
-				if ((robotsText = resp.data.match(RegularExpression.NewLine))) {
-					for (const text of robotsText) {
-						findInRobots(text);
-					}
+				let texts;
+				if ((texts = resp.data.match(RegularExpression.NewLine))) {
+					const txt = new ParseText(texts);
+					this.siteMap = txt.href;
+					this.noPaths = txt.data;
 				}
 			}
 		} catch (error) {

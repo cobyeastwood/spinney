@@ -15,13 +15,10 @@ export default class Format {
 				return;
 			}
 
-			const format = (node.data?.split(' ') || []).reduce(
-				(acc: any, word: string) => {
-					acc[word] = word;
-					return acc;
-				},
-				{}
-			);
+			const format = node?.data?.split(' ').reduce((acc: any, word: string) => {
+				acc[word] = word;
+				return acc;
+			}, {});
 
 			this.data[node.getId()] = format;
 		}

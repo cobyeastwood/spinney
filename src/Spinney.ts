@@ -178,11 +178,17 @@ export default class Spinney {
 
 		if (pathname.startsWith('/') && pathname[1] !== '/') {
 			const unset = this.setURL(pathname);
-			const inURL = this.decodedURL.toString();
+			const deURL = this.decodedURL.toString();
 			unset();
-			return inURL;
+			return deURL;
 		}
 		return pathname;
+	}
+
+	getOriginURL(hrefs: string[]): any[] {
+		return hrefs
+			.filter(href => this.isOrigin(href))
+			.map(href => this.getURL(href));
 	}
 
 	async getText(pathname: string): Promise<void> {
@@ -218,12 +224,6 @@ export default class Spinney {
 		try {
 			let retryAttempts = 0;
 
-			const getOriginURL = (hrefs: string[]): any[] => {
-				return hrefs
-					.filter(href => this.isOrigin(href))
-					.map(href => this.getURL(href));
-			};
-
 			const context: Context = {};
 
 			const retry: () => Promise<this | any[] | undefined> = async () => {
@@ -243,7 +243,7 @@ export default class Spinney {
 					}
 
 					this.subscriber.next(context);
-					return getOriginURL(context.hrefs);
+					return this.getOriginURL(context.hrefs);
 				} catch (error: any) {
 					if (retryAttempts >= MAX_RETRIES) {
 						throw error;

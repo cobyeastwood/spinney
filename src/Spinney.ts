@@ -156,15 +156,10 @@ export default class Spinney {
 		this.decodedURL.pathname = pathname;
 	}
 
-	getUnsetURL(newURL: URL): string {
-		this.decodedURL.pathname = '';
-		return newURL.toString();
-	}
-
 	getURL(pathname: string): string {
 		if (pathname.startsWith('/')) {
 			this.setURL(pathname);
-			return this.getUnsetURL(this.decodedURL);
+			return this.decodedURL.toString();
 		}
 		return pathname;
 	}

@@ -4,10 +4,12 @@ export default class ParseText {
 	href: string;
 	data: string[];
 	isParsing: boolean;
+	isSiteMap: boolean;
 
 	constructor(data: any) {
 		this.href = '';
 		this.data = [];
+		this.isSiteMap = false;
 		this.isParsing = false;
 
 		this.setUp(data);
@@ -25,6 +27,7 @@ export default class ParseText {
 		if (RegularExpression.SiteMap.test(text)) {
 			const index = text.indexOf('http');
 			if (index !== -1) {
+				this.isSiteMap = true;
 				this.href = text.slice(index);
 			}
 		}

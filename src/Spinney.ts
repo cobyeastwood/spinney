@@ -45,7 +45,7 @@ export default class Spinney {
 	}
 
 	async setUp(): Promise<void> {
-		await this.getText(this.decodedURL.origin, '/robots.txt');
+		await this.getText('/robots.txt');
 
 		let href;
 
@@ -142,24 +142,27 @@ export default class Spinney {
 		return false;
 	}
 
-	getURL(href: string): string {
-		if (href.startsWith('/')) {
-			const decodedURL = new URL(href);
-			decodedURL.pathname = href;
-			return decodedURL.toString();
-		}
-		return href;
+	setURL(pathname: string): void {
+		this.decodedURL.pathname = pathname;
 	}
 
-	async getText(origin: string, pathname: string): Promise<void> {
+	getURL(pathname: string): string {
+		if (pathname.startsWith('/')) {
+			this.setURL(pathname);
+			return this.decodedURL.toString();
+		}
+		return pathname;
+	}
+
+	async getText(pathname: string): Promise<void> {
 		try {
-			const endpoint = origin.concat(pathname);
-			const resp: AxiosResponse = await axios.get(endpoint);
+			const resp: AxiosResponse = await axios.get(this.getURL(pathname));
 
 			if (resp.status === 200) {
 				let texts;
 				if ((texts = resp.data.match(RegularExpression.NewLine))) {
 					const txt = new ParseText(texts);
+					this.isSiteMap = txt.isSiteMap;
 					this.siteMap = txt.href;
 					this.noPaths = txt.data;
 				}

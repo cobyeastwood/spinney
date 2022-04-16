@@ -162,7 +162,7 @@ export default class Spinney {
 		}
 	}
 
-	findUserAgent(text: string) {
+	findUserAgent(text: string): void {
 		if (RegularExpression.UserAgent.test(text)) {
 			if (text.indexOf('*') !== -1) {
 				this.takeDisallow = true;
@@ -188,7 +188,7 @@ export default class Spinney {
 			const robotsEndpoint = origin.concat('/robots.txt');
 			const resp: AxiosResponse = await axios.get(robotsEndpoint);
 
-			const findInRobots = (text: string) => {
+			const findInRobots = (text: string): void => {
 				this.findSiteMap(text);
 				this.findUserAgent(text);
 				this.findDisallow(text);

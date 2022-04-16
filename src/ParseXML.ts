@@ -1,5 +1,5 @@
 import { parseStringPromise } from 'xml2js';
-import { Site, SiteMapOuput } from './types';
+import { RawHrefs, SiteMapOuput } from './types';
 
 export default class ParseXML {
 	private isWaiting: boolean = false;
@@ -20,7 +20,7 @@ export default class ParseXML {
 		});
 	}
 
-	private _findHrefs(output: SiteMapOuput): Site {
+	private _findHrefs(output: SiteMapOuput): RawHrefs {
 		const hrefs: string[] = [];
 
 		if (output?.sitemapindex?.sitemap) {
@@ -35,7 +35,7 @@ export default class ParseXML {
 		return { hrefs };
 	}
 
-	async findHrefs(): Promise<Site> {
+	async findHrefs(): Promise<RawHrefs> {
 		if (this.isWaiting) {
 			await this.setUpPromise;
 		}

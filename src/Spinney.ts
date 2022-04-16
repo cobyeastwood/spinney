@@ -1,9 +1,10 @@
-import axios from 'axios'; // replace with npm follow-redirects?
+import axios, { AxiosResponse } from 'axios';
 import { Observable } from 'rxjs';
 import ParseXML from './ParseXML';
 import ParseDocument from './ParseDocument';
+import Format from './Format';
 
-import { Context } from './types';
+import { NodeElement, Context } from './types';
 import { MAX_RETRIES, RegularExpression, Attribute } from './constants';
 
 export default class Spinney {
@@ -144,7 +145,7 @@ export default class Spinney {
 		return false;
 	}
 
-	getOriginURL(href: string): string {
+	getURL(href: string): string {
 		if (href.startsWith('/')) {
 			const decodedURL = new URL(href);
 			decodedURL.pathname = href;
@@ -191,7 +192,7 @@ export default class Spinney {
 	async getRobotsText(origin: string): Promise<void> {
 		try {
 			const robotsEndpoint = origin.concat('/robots.txt');
-			const resp = await axios.get(robotsEndpoint);
+			const resp: AxiosResponse = await axios.get(robotsEndpoint);
 
 			if (resp.status === 200) {
 				let robotsText;
@@ -213,40 +214,40 @@ export default class Spinney {
 		}
 	}
 
+	isXML({ headers }: AxiosResponse): boolean {
+		return headers['content-type'].indexOf('application/xml') !== -1;
+	}
+
 	private async fetch(href: string): Promise<any> {
 		try {
 			let retryAttempts = 0;
 
-			const extractOriginHrefs = (hrefs: string[]): any[] => {
+			const getOriginURL = (hrefs: string[]): any[] => {
 				return hrefs
 					.filter(href => this.isOrigin(href))
-					.map(href => this.getOriginURL(href));
+					.map(href => this.getURL(href));
 			};
 
 			const context: Context = {};
 
 			const retry: () => Promise<this | any[] | undefined> = async () => {
 				try {
-					const resp = await axios.get(href);
+					const resp: AxiosResponse = await axios.get(href);
 
-					if (this.isSiteMap) {
+					if (this.isXML(resp)) {
 						const xml = await new ParseXML(resp.data).findHrefs();
-						const doc = new ParseDocument(resp.data).find(this.keys);
-
 						context.hrefs = xml.hrefs;
-						context.data = doc.data;
 					} else {
 						const doc = new ParseDocument(resp.data).find(
 							this.keys,
 							Attribute.Href
 						);
-
 						context.hrefs = doc.hrefs;
-						context.data = doc.data;
+						context.nodes = new Format(doc.nodes as NodeElement[]);
 					}
 
 					this.subscriber.next(context);
-					return extractOriginHrefs(context.hrefs);
+					return getOriginURL(context.hrefs);
 				} catch (error: any) {
 					if (retryAttempts >= MAX_RETRIES) {
 						throw error;

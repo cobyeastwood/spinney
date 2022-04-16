@@ -6,8 +6,10 @@ import {
 	NodeElement,
 	Memoized,
 	Stack,
-	Raws,
+	Raw,
 } from './types';
+
+let id = 0;
 
 export default class ParseDocument {
 	private setUpOutput: Document | DocumentNode;
@@ -100,18 +102,17 @@ export default class ParseDocument {
 		}
 	}
 
-	private _find(callback: Callback): Raws {
+	private _find(callback: Callback): Raw {
 		this.depthSearch(callback);
 
-		const data = this.fromMap(this.adjacency);
 		const raws = {
-			data: data.flat(1),
-		} as Raws;
+			nodes: this.fromMap(this.adjacency).flat(1),
+		} as Raw;
 
 		return raws;
 	}
 
-	find(keys: string | string[], attrib?: string): Raws {
+	find(keys: string | string[], attrib?: string): Raw {
 		const isAttribs = typeof attrib === 'string';
 		const memoizedKeys = this.addMemoized(keys);
 
@@ -124,6 +125,9 @@ export default class ParseDocument {
 
 			for (const key of memoizedKeys) {
 				if (this.hasKey(node, this.memoized[key])) {
+					node.getId = function () {
+						return String(id);
+					};
 					if (this.adjacency.has(key)) {
 						this.adjacency.set(
 							key,

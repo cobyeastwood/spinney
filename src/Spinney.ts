@@ -101,14 +101,12 @@ export default class Spinney {
 	}
 
 	isMatch(testPathName: string, basePathName: string) {
-		let pathName;
-		if ((pathName = testPathName.match(RegularExpression.ForwardSlashWord))) {
-			const [matchedPathName] = pathName;
-			const index = matchedPathName.indexOf('/');
+		if (RegularExpression.ForwardSlashWord.test(testPathName)) {
+			const index = testPathName.indexOf('/');
 			if (index === -1) {
-				return this.getRegExp(matchedPathName).test(basePathName);
+				return this.getRegExp(testPathName).test(basePathName);
 			}
-			return this.getRegExp(matchedPathName.slice(index)).test(basePathName);
+			return this.getRegExp(testPathName.slice(index)).test(basePathName);
 		}
 		return false;
 	}
@@ -155,34 +153,30 @@ export default class Spinney {
 	}
 
 	findSiteMap(text: string): void {
-		let siteMap;
-		if ((siteMap = text.match(RegularExpression.SiteMap))) {
-			const [matchedSiteMap] = siteMap;
-			const index = matchedSiteMap.indexOf('http');
-			this.siteMap = matchedSiteMap.slice(index);
-			this.isSiteMap = true;
+		if (RegularExpression.SiteMap.test(text)) {
+			const index = text.indexOf('http');
+			if (index !== -1) {
+				this.siteMap = text.slice(index);
+				this.isSiteMap = true;
+			}
 		}
 	}
 
-	findUserAgent(text: string): boolean {
-		let userAgent;
-		if ((userAgent = text.match(RegularExpression.UserAgent))) {
-			const [matchedUserAgent] = userAgent;
-			if (matchedUserAgent.indexOf('*')) {
+	findUserAgent(text: string) {
+		if (RegularExpression.UserAgent.test(text)) {
+			if (text.indexOf('*') !== -1) {
 				this.takeDisallow = true;
 			}
-			return true;
 		}
-		return false;
 	}
 
 	findDisallow(text: string): void {
 		if (this.takeDisallow) {
-			let disallow;
-			if ((disallow = text.match(RegularExpression.Disallow))) {
-				const [matchedDisallow] = disallow;
-				const index = matchedDisallow.indexOf('/');
-				this.noPaths.add(matchedDisallow.slice(index));
+			if (RegularExpression.Disallow.test(text)) {
+				const index = text.indexOf('/');
+				if (index !== -1) {
+					this.noPaths.add(text.slice(index));
+				}
 			} else {
 				this.takeDisallow = false;
 			}
@@ -199,11 +193,7 @@ export default class Spinney {
 				if ((robotsText = resp.data.match(RegularExpression.NewLine))) {
 					for (const text of robotsText) {
 						this.findSiteMap(text);
-
-						if (this.findUserAgent(text)) {
-							continue;
-						}
-
+						this.findUserAgent(text);
 						this.findDisallow(text);
 					}
 				}

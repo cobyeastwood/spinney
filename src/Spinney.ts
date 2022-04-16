@@ -188,13 +188,17 @@ export default class Spinney {
 			const robotsEndpoint = origin.concat('/robots.txt');
 			const resp: AxiosResponse = await axios.get(robotsEndpoint);
 
+			const findInRobots = (text: string) => {
+				this.findSiteMap(text);
+				this.findUserAgent(text);
+				this.findDisallow(text);
+			};
+
 			if (resp.status === 200) {
 				let robotsText;
 				if ((robotsText = resp.data.match(RegularExpression.NewLine))) {
 					for (const text of robotsText) {
-						this.findSiteMap(text);
-						this.findUserAgent(text);
-						this.findDisallow(text);
+						findInRobots(text);
 					}
 				}
 			}

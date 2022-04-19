@@ -14,10 +14,10 @@ function debug(value: any): void {
 
 export default class Spinney {
 	private isOverideOn: boolean;
-	// private isSiteMap: boolean;
-	// private siteMap: string;
+	private isSiteMap: boolean;
+	private siteMap: string;
 	private isProcessing: boolean;
-	private noPaths: string[];
+	private noFetchPaths: string[];
 	private seen: Set<string>;
 	private decodedURL: URL;
 	private subscriber: any;
@@ -25,10 +25,10 @@ export default class Spinney {
 
 	constructor(href: string, options?: Options) {
 		this.isOverideOn = !!options?.overide;
-		// this.isSiteMap = false;
-		// this.siteMap = '';
+		this.isSiteMap = false;
+		this.siteMap = '';
 		this.isProcessing = false;
-		this.noPaths = [];
+		this.noFetchPaths = [];
 		this.seen = new Set();
 		this.decodedURL = new URL(href);
 		this.subscriber;
@@ -44,22 +44,22 @@ export default class Spinney {
 
 		if (this.isProcessing) {
 			const nextHrefs: string[] = await Promise.all(
-				hrefs.map(href => this.fetch(href))
+				hrefs.map(href => this.fetchXMLOrDocument(href))
 			);
 			await this._setUp(nextHrefs.flat(1));
 		}
 	}
 
-	async setUp(): Promise<void> {
-		// await this.getText('/robots.txt');
+	private async setUp(): Promise<void> {
+		await this.fetchText('/robots.txt');
 
 		let href;
 
-		// if (this.isSiteMap) {
-		// 	href = this.siteMap;
-		// } else {
-		href = this.decodedURL.origin;
-		// }
+		if (this.isSiteMap) {
+			href = this.siteMap;
+		} else {
+			href = this.decodedURL.origin;
+		}
 
 		this.resume();
 		await this._setUp([href]);
@@ -116,13 +116,13 @@ export default class Spinney {
 		return false;
 	}
 
-	checkIsMatch(href: string): boolean {
+	readIsMatch(href: string): boolean {
 		if (this.isOverideOn) {
 			return true;
 		}
 
-		for (const noPath of this.noPaths) {
-			if (this.isMatch(noPath, href)) {
+		for (const path of this.noFetchPaths) {
+			if (this.isMatch(path, href)) {
 				return true;
 			}
 		}
@@ -132,35 +132,8 @@ export default class Spinney {
 	canFetch(href: string): boolean {
 		if (!this.seen.has(href)) {
 			this.seen.add(href);
-			return this.checkIsMatch(href);
+			return this.readIsMatch(href);
 		}
-		return false;
-	}
-
-	isOrigin(href: string): boolean {
-		let decodedURL;
-
-		if (href.startsWith('/')) {
-			href = this.getURL(href);
-		}
-
-		try {
-			decodedURL = new URL(href);
-		} catch {
-			return false;
-		}
-
-		if (href.indexOf(decodedURL.hostname) !== -1) {
-			decodedURL.pathname = href;
-			debug(decodedURL);
-			return this.canFetch(decodedURL.toString());
-		}
-
-		if (href.startsWith(decodedURL.origin)) {
-			debug(decodedURL);
-			return this.canFetch(href);
-		}
-
 		return false;
 	}
 
@@ -185,13 +158,36 @@ export default class Spinney {
 		return pathname;
 	}
 
+	isOrigin(href: string): boolean {
+		try {
+			if (href.startsWith('/')) {
+				href = this.getURL(href);
+			}
+
+			const decodedURL = new URL(href);
+
+			if (href.indexOf(decodedURL.hostname) !== -1) {
+				decodedURL.pathname = href;
+				debug(decodedURL);
+				return this.canFetch(decodedURL.toString());
+			}
+
+			if (href.startsWith(decodedURL.origin)) {
+				debug(decodedURL);
+				return this.canFetch(href);
+			}
+		} catch {}
+
+		return false;
+	}
+
 	getOriginURL(hrefs: string[]): any[] {
 		return hrefs
 			.filter(href => this.isOrigin(href))
 			.map(href => this.getURL(href));
 	}
 
-	async getText(pathname: string): Promise<void> {
+	async fetchText(pathname: string): Promise<void> {
 		try {
 			const resp: AxiosResponse = await axios.get(this.getURL(pathname));
 
@@ -200,14 +196,14 @@ export default class Spinney {
 				if ((texts = resp.data.match(RegularExpression.NewLine))) {
 					const txt = new ParseText(texts);
 
-					// this.isSiteMap = txt.isSiteMap;
-					// this.siteMap = txt.href;
+					this.isSiteMap = txt.isSiteMap;
+					this.siteMap = txt.href;
 
 					if (this.isOverideOn) {
 						return;
 					}
 
-					this.noPaths = txt.data;
+					this.noFetchPaths = txt.data;
 				}
 			}
 		} catch (error) {
@@ -217,10 +213,21 @@ export default class Spinney {
 	}
 
 	isXML({ headers }: AxiosResponse): boolean {
-		return headers['content-type'].indexOf('application/xml') !== -1;
+		const isHeaderXML = (header: string) =>
+			header.indexOf('application/xml') !== -1;
+
+		if (headers['Content-Type']) {
+			return isHeaderXML(headers['Content-Type']);
+		}
+
+		if (headers['content-type']) {
+			return isHeaderXML(headers['content-type']);
+		}
+
+		return false;
 	}
 
-	private async fetch(href: string): Promise<any> {
+	async fetchXMLOrDocument(href: string): Promise<any> {
 		try {
 			let retryAttempts = 0;
 

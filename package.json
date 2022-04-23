@@ -1,7 +1,7 @@
 {
 	"name": "spinney",
 	"description": "A simple and nimble web scraper.",
-	"version": "1.0.0",
+	"version": "1.0.2",
 	"author": "cobyeastwood <cobyeastwood@gmail.com>",
 	"license": "MIT",
 	"keywords": [
@@ -31,7 +31,6 @@
 		"axios": "^0.26.1",
 		"htmlparser2": "^7.2.0",
 		"rxjs": "^7.5.5",
-		"url-pattern": "^1.0.3",
 		"xml2js": "^0.4.23"
 	},
 	"devDependencies": {

@@ -62,7 +62,7 @@ export default class Spinney {
 		await this._setUp([href]);
 	}
 
-	newError(method: Function, parameter: any) {
+	newError(method: Function, parameter: any): Error {
 		return new Error(
 			`${method.name} received unexpected parameter of type ${typeof parameter}`
 		);
@@ -121,7 +121,7 @@ export default class Spinney {
 		return false;
 	}
 
-	readIsMatch(href: string): boolean {
+	isMatchYesFetch(href: string): boolean {
 		if (this.isOverideOn) {
 			return true;
 		}
@@ -135,10 +135,10 @@ export default class Spinney {
 		return true;
 	}
 
-	canFetch(href: string): boolean {
+	isYesFetch(href: string): boolean {
 		if (!this.seen.has(href)) {
 			this.seen.add(href);
-			return this.readIsMatch(href);
+			return this.isMatchYesFetch(href);
 		}
 		return false;
 	}
@@ -166,11 +166,11 @@ export default class Spinney {
 			const decodedURL = new URL(href);
 
 			if (decodedURL.hostname.startsWith(this.decodedURL.hostname)) {
-				return this.canFetch(decodedURL.toString());
+				return this.isYesFetch(decodedURL.toString());
 			}
 
 			if (decodedURL.origin.startsWith(this.decodedURL.origin)) {
-				return this.canFetch(decodedURL.toString());
+				return this.isYesFetch(decodedURL.toString());
 			}
 		} catch {}
 

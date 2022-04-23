@@ -15,7 +15,7 @@ export default class ParseText {
 		this.setUp(data);
 	}
 
-	setUp(data: string[]) {
+	private setUp(data: string[]) {
 		for (const text of data) {
 			this.findSiteMap(text);
 			this.findUserAgent(text);

@@ -25,6 +25,7 @@ export default class ParseXML {
 
 		if (output?.sitemapindex?.sitemap) {
 			let href;
+			console.log('sitemap ', output.sitemapindex.sitemap);
 			for (const site of output.sitemapindex.sitemap) {
 				if (([href] = site.loc)) {
 					hrefs.push(href);

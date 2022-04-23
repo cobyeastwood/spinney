@@ -8,7 +8,7 @@ export default class Format {
 		this.setUp(nodes);
 	}
 
-	setUp(nodes: NodeElement[]) {
+	private setUp(nodes: NodeElement[]) {
 		for (const node of nodes) {
 			if (this.data[node.getId()]) {
 				return this.data[node.getId()];

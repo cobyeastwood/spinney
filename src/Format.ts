@@ -1,4 +1,5 @@
 import { NodeElement } from './types';
+import { RegularExpression } from './constants';
 
 export default class Format {
 	data: any;
@@ -15,16 +16,28 @@ export default class Format {
 			}
 
 			const format = node?.data?.split(' ').reduce((acc: any, word: string) => {
-				if (acc[word]) {
-					acc[word].push(word);
-				} else {
-					acc[word] = [word];
+				const key = this.getKey(word);
+
+				if (key) {
+					if (acc[key]) {
+						acc[key].push(word);
+					} else {
+						acc[key] = [word];
+					}
 				}
+
 				return acc;
 			}, {});
 
 			this.data[node.getId()] = format;
 		}
+	}
+
+	getKey(word: string): string {
+		return word
+			.trim()
+			.replace(RegularExpression.SpecialCharachter, '_')
+			.toLowerCase();
 	}
 
 	getNodes() {

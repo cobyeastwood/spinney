@@ -10,6 +10,7 @@ const RegularExpression = {
 	Host: /^([Hh]ost:) (.+)$/g,
 	NewLine: /[^\r\n]+/g,
 	SiteMap: /^([Ss]itemap:) (.+)$/,
+	SpecialCharachter: /[^a-zA-Z0-9 ]/g,
 	UserAgent: /^([Uu]ser-agent:) (.+)$/g,
 	ForwardSlashWord: /\/(\w+)/gi,
 	HttpOrHttps:

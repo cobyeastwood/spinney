@@ -33,7 +33,7 @@ export default class ParseDocument {
 		}
 	}
 
-	private addMemoized(keys: string | string[]): string[] {
+	addMemoized(keys: string | string[]): string[] {
 		return this.toArray(keys).filter(key => {
 			if (typeof key === 'string') {
 				if (this.memoized[key] === undefined) {

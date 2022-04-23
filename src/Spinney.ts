@@ -62,6 +62,12 @@ export default class Spinney {
 		await this._setUp([href]);
 	}
 
+	newError(method: Function, parameter: any) {
+		return new Error(
+			`${method.name} received unexpected parameter of type ${typeof parameter}`
+		);
+	}
+
 	resume(): void {
 		this.isProcessing = true;
 	}
@@ -83,7 +89,7 @@ export default class Spinney {
 
 	spin(keys: string | string[]): Observable<any> {
 		if (!keys) {
-			throw new Error(`spin expected parameter keys not to be ${typeof keys}`);
+			throw this.newError(this.spin, keys);
 		}
 
 		this.keys = this.toArray(keys);
@@ -139,7 +145,7 @@ export default class Spinney {
 
 	getURL(pathname: string): string {
 		if (!(typeof pathname === 'string')) {
-			throw Error('pathname is not of type string');
+			throw this.newError(this.getURL, pathname);
 		}
 
 		if (pathname.startsWith('/')) {

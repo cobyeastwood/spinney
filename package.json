@@ -1,13 +1,13 @@
 {
 	"name": "spinney",
-	"description": "A fast and nimble web harvester.",
+	"description": "A simple and nimble web scraper.",
 	"version": "1.0.0",
 	"author": "cobyeastwood <cobyeastwood@gmail.com>",
 	"license": "MIT",
 	"keywords": [
 		"spinney",
-		"harvester",
 		"scraper",
+		"harvester",
 		"selector"
 	],
 	"repository": "git@github.com:cobyeastwood/spinney.git",
@@ -30,11 +30,7 @@
 	"dependencies": {
 		"axios": "^0.26.1",
 		"htmlparser2": "^7.2.0",
-		"retext": "^8.1.0",
-		"retext-keywords": "^7.1.0",
-		"retext-pos": "^4.1.0",
 		"rxjs": "^7.5.5",
-		"to-vfile": "^7.2.3",
 		"url-pattern": "^1.0.3",
 		"xml2js": "^0.4.23"
 	},

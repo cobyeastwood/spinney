@@ -1,6 +1,6 @@
 ## Spinney
 
-A fast and nimble web harvester.
+A simple and nimble web scraper.
 
 ### Basic Example
 

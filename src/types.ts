@@ -9,7 +9,7 @@ type Stack = DocumentNode[];
 type Memoized = { [key: string]: string };
 
 type Raw = { nodes: NodeElement[]; [key: string]: any[] };
-type RawHrefs = { hrefs: string[]; freqs?: string[] };
+type RawHrefs = { hrefs: string[] };
 
 type SiteMapOuput =
 	| {

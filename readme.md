@@ -7,10 +7,10 @@ A simple and nimble web scraper.
 ```javascript
 const Spinney = require('spinney');
 
-// Register an endpoint to harvest
+// Register an endpoint to scrape
 const spinney = new Spinney('https://google.com/');
 
-// Begin extracting process on provided keys
+// Begin harvesting on provided keys
 const observable = spinney.spin(['foo', 'bar']);
 
 // Subscribe to key changes

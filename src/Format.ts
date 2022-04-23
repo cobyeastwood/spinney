@@ -36,7 +36,7 @@ export default class Format {
 	getKey(word: string): string {
 		return word
 			.trim()
-			.replace(RegularExpression.SpecialCharachter, '_')
+			.replace(RegularExpression.SpecialCharacter, '_')
 			.toLowerCase();
 	}
 

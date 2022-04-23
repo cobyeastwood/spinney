@@ -8,10 +8,6 @@ import Format from './Format';
 import { Context, Options } from './types';
 import { MAX_RETRIES, RegularExpression, Attribute } from './constants';
 
-// function debug(value: any, name?: string): void {
-// 	console.log(name ? name : String(value), value);
-// }
-
 export default class Spinney {
 	private isOverideOn: boolean;
 	private isSiteMap: boolean;
@@ -46,7 +42,7 @@ export default class Spinney {
 
 		if (this.isProcessing) {
 			const nextHrefs: string[] = await Promise.all(
-				hrefs.map(href => this.fetchXMLOrDocument(href))
+				hrefs.filter(Boolean).map(href => this.fetchXMLOrDocument(href))
 			);
 			await this._setUp(nextHrefs.flat(1));
 		}
@@ -143,7 +139,7 @@ export default class Spinney {
 
 	getURL(pathname: string): string {
 		if (!(typeof pathname === 'string')) {
-			return '';
+			throw Error('pathname is not of type string');
 		}
 
 		if (pathname.startsWith('/')) {
@@ -178,7 +174,7 @@ export default class Spinney {
 	getOriginURL(hrefs: string[]): any[] {
 		return hrefs
 			.map(href => this.getURL(href))
-			.filter(href => this.isOrigin(href));
+			.filter(href => href && this.isOrigin(href));
 	}
 
 	isOnce = true;
@@ -230,7 +226,7 @@ export default class Spinney {
 		try {
 			let retryAttempts = 0;
 
-			const context: Context = {};
+			const context: Context = { href };
 
 			const retry: () => Promise<this | any[] | undefined> = async () => {
 				try {

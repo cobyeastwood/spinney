@@ -9,10 +9,13 @@ type Stack = DocumentNode[];
 type Memoized = { [key: string]: string };
 
 type Raw = { nodes: NodeElement[]; [key: string]: any[] };
-type RawHrefs = { hrefs: string[] };
+type RawHrefs = { hrefs: string[]; freqs?: string[] };
 
 type SiteMapOuput =
-	| { sitemapindex: { $?: any; sitemap: Array<{ loc: string[] }> } }
+	| {
+			urlset?: { url: Array<any> };
+			sitemapindex?: { $?: any; sitemap: Array<{ loc: string[] }> };
+	  }
 	| undefined;
 
 interface NodeElement extends Element {
@@ -20,7 +23,7 @@ interface NodeElement extends Element {
 	getId: () => string;
 }
 
-type Context = { hrefs?: string[]; nodes?: any };
+type Context = { href?: string; hrefs?: string[]; nodes?: any };
 
 export {
 	Callback,

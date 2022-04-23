@@ -9,10 +9,6 @@ describe('Format class', () => {
 
 		const nodes = new Format(doc.nodes);
 
-		for (const node in nodes) {
-			console.log(nodes[node]);
-		}
-
 		expect(Object.keys(nodes)).toHaveLength(1);
 	});
 });

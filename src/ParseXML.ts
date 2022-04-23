@@ -22,13 +22,23 @@ export default class ParseXML {
 
 	private _findHrefs(output: SiteMapOuput): RawHrefs {
 		const hrefs: string[] = [];
+		const freqs: string[] = [];
 
 		if (output?.sitemapindex?.sitemap) {
 			let href;
-			console.log('sitemap ', output.sitemapindex.sitemap);
 			for (const site of output.sitemapindex.sitemap) {
 				if (([href] = site.loc)) {
 					hrefs.push(href);
+				}
+			}
+		} else if (output?.urlset?.url) {
+			let href, freq;
+			for (const site of output.urlset.url) {
+				if (([href] = site.loc)) {
+					hrefs.push(href);
+				}
+				if (([freq] = site.loc)) {
+					freqs.push(freq);
 				}
 			}
 		}

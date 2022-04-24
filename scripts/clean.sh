@@ -4,7 +4,7 @@ rm_node_modules=$1
 
 echo 'cleaning...'
 
-rm -rf lib
+rm -rf "lib*"
 
 if [[ -n "$rm_node_modules" ]]; then
 

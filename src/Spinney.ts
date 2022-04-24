@@ -214,8 +214,7 @@ export default class Spinney {
 	}
 
 	isXML({ headers }: AxiosResponse): boolean {
-		const isHeaderXML = (header: string) =>
-			header.indexOf('application/xml') !== -1;
+		const isHeaderXML = (header: string) => header.indexOf('xml') !== -1;
 
 		if (headers['Content-Type']) {
 			return isHeaderXML(headers['Content-Type']);
@@ -238,20 +237,22 @@ export default class Spinney {
 				try {
 					const resp: AxiosResponse = await axios.get(href);
 
+					let hrefs;
+
 					if (this.isXML(resp)) {
 						const xml = await new ParseXML(resp.data).findHrefs();
-						context.hrefs = xml.hrefs;
+						hrefs = xml.hrefs;
 					} else {
 						const doc = new ParseDocument(resp.data).find(
 							this.keys,
 							Attribute.Href
 						);
-						context.hrefs = doc.hrefs;
+						hrefs = doc.hrefs;
 						context.nodes = new Format(doc.nodes).getNodes();
 					}
 
 					this.subscriber.next(context);
-					return this.getOriginURL(context.hrefs);
+					return this.getOriginURL(hrefs);
 				} catch (error: any) {
 					if (retryAttempts >= MAX_RETRIES) {
 						throw error;

@@ -189,18 +189,18 @@ export default class Spinney {
 			);
 
 			if (resp.status === 200) {
-				const decoder = new StringDecoder();
+				const stringDecoder = new StringDecoder();
 
-				var string = '';
+				let string = '';
 
 				const isBuffer = (encoding: string) => encoding === 'buffer';
 
 				const transformStream = new Transform({
 					transform(chunk, encoding, cb) {
 						if (isBuffer(encoding)) {
-							string += decoder.write(chunk as Buffer);
+							string += stringDecoder.write(chunk as Buffer);
 						} else {
-							string += string;
+							string += chunk;
 						}
 
 						for (const line of string.split(/\r?\n/)) {
@@ -210,21 +210,17 @@ export default class Spinney {
 						cb();
 					},
 					flush(cb) {
-						this.push(decoder.end());
+						this.push(stringDecoder.end());
 						cb();
 					},
 				});
-
-				var once = true;
-
-				const parse = new ParseLine();
 
 				resp.data.pipe(transformStream).on('data', (line: string) => {
 					const data = new ParseLine(line);
 					if (data.data) {
 						this.forbidden.add(data.data);
 					}
-					if (once) {
+					if (data.href) {
 						this.href = data.href;
 					}
 				});
@@ -270,12 +266,12 @@ export default class Spinney {
 						{
 							onattribute(name, value) {
 								if (options.xmlMode) {
-									// console.log('XML Attribute ', name, value);
+									console.log('XML Attribute ', name, value);
 								}
 
 								switch (name) {
 									case 'href':
-										// console.log('HTML href ', href);
+										console.log('HTML href ', href);
 										hrefs.push(value);
 										break;
 								}

@@ -8,7 +8,7 @@ export default class ParseLine {
 
 	constructor(data: any) {
 		this.href = '';
-		this.once = true;
+		this.data = '';
 		this.isSiteMap = false;
 		this.isParsing = false;
 		this.setUp(data);

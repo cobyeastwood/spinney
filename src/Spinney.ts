@@ -1,4 +1,4 @@
-import axios, { AxiosResponse } from 'axios';
+import axios, { Axios, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { Observable } from 'rxjs';
 import { WritableStream } from 'htmlparser2/lib/WritableStream';
 
@@ -6,19 +6,20 @@ import { Context, Options } from './types';
 import { MAX_RETRIES, RegularExpression } from './constants';
 import Parse from './Parse';
 
+import { Not } from './Utils';
+
 export default class Spinney {
+	private axiosInstance: Axios;
 	private isOverideOn: boolean;
-	private isDecodeOrigin: boolean;
 	private isProcessing: boolean;
 	private forbidden: Set<string>;
 	private href: string;
 	private seen: Set<string>;
 	private decodeURL: URL;
 	private subscriber: any;
-	private axiosConfig: any;
 
-	constructor(href: string, options?: Options) {
-		this.isDecodeOrigin = false;
+	constructor(href: string, options?: Options, config?: AxiosRequestConfig) {
+		this.axiosInstance = axios.create(config || { responseType: 'stream' });
 		this.isOverideOn = !!options?.overide;
 		this.isProcessing = false;
 		this.forbidden = new Set();
@@ -26,7 +27,6 @@ export default class Spinney {
 		this.href = href;
 		this.decodeURL = new URL(href);
 		this.subscriber;
-		this.axiosConfig = { responseType: 'stream' };
 	}
 
 	private async _setUp(hrefs: string[]): Promise<void> {
@@ -45,14 +45,24 @@ export default class Spinney {
 	}
 
 	private async setUp(): Promise<void> {
-		await this.httpText('/robots.txt');
-		await this._setUp([
-			this.isDecodeOrigin ? this.decodeURL.toString() : this.decodeURL.origin,
-		]);
+		try {
+			const context = await this.httpText('/robots.txt');
+
+			this.setForbidden(context);
+			this.resume();
+
+			console.log(context.isSiteMap, context.site, this.decodeURL.origin);
+
+			await this._setUp([
+				context.isSiteMap ? context.site : this.decodeURL.origin,
+			]);
+		} catch (e) {
+			console.log('err ', e);
+		}
 	}
 
-	setDecodeURL(href: string) {
-		this.decodeURL = new URL(href);
+	setForbidden({ forbidden }: { forbidden: Set<string> }) {
+		this.forbidden = forbidden;
 	}
 
 	newError(method: Function, parameter: any): Error {
@@ -77,7 +87,7 @@ export default class Spinney {
 	}
 
 	isEmpty(data: any): boolean {
-		return !Array.isArray(data) || data.length === 0;
+		return Not(Array.isArray(data)) || data.length === 0;
 	}
 
 	spin(keys: string | string[]): Observable<any> {
@@ -88,7 +98,6 @@ export default class Spinney {
 		return new Observable(subscriber => {
 			this.subscriber = subscriber;
 
-			this.resume();
 			this.setUp();
 
 			return () => {
@@ -104,10 +113,10 @@ export default class Spinney {
 	isMatch(testPathName: string, basePathName: string) {
 		if (RegularExpression.ForwardSlashWord.test(testPathName)) {
 			const index = testPathName.indexOf('/');
-			if (index === -1) {
-				return this.getRegExp(testPathName).test(basePathName);
+			if (Not(index === -1)) {
+				return this.getRegExp(testPathName.slice(index)).test(basePathName);
 			}
-			return this.getRegExp(testPathName.slice(index)).test(basePathName);
+			return this.getRegExp(testPathName).test(basePathName);
 		}
 		return false;
 	}
@@ -127,7 +136,7 @@ export default class Spinney {
 	}
 
 	isForbidden(href: string): boolean {
-		if (!this.seen.has(href)) {
+		if (Not(this.seen.has(href))) {
 			this.seen.add(href);
 			return this._isForbidden(href);
 		}
@@ -135,7 +144,7 @@ export default class Spinney {
 	}
 
 	getURL(pathname: string): string {
-		if (!(typeof pathname === 'string')) {
+		if (Not(typeof pathname === 'string')) {
 			throw this.newError(this.getURL, pathname);
 		}
 
@@ -173,38 +182,32 @@ export default class Spinney {
 
 		for (const href of hrefs) {
 			const URL = this.getURL(href);
-			if (URL && this.isOrigin(URL)) originURLs.push(URL);
+			if (URL && this.isOrigin(URL)) {
+				originURLs.push(URL);
+			}
 		}
 
 		return originURLs;
 	}
 
-	async httpText(pathname: string): Promise<void> {
+	async httpText(pathname: string): Promise<void | any> {
 		try {
-			const axiosInstance = axios.create(this.axiosConfig);
-			const resp: AxiosResponse = await axiosInstance.get(
-				this.getURL(pathname)
-			);
+			const resp = await this.axiosInstance.get(this.getURL(pathname));
 
-			if (resp.status === 200) {
-				const parse = new Parse();
+			if (Not(resp.status === 200)) {
+				return Promise.reject();
+			}
 
+			const parse = new Parse();
+			return new Promise(resolve =>
 				resp.data
 					.on('data', (chunk: Buffer) => {
-						const string = chunk.toString();
-
-						for (const line of string.split(/\r?\n/)) {
+						for (const line of String(chunk).split(/\r?\n/)) {
 							parse.onLine(line);
 						}
 					})
-					.on('end', () => {
-						const { data, href, isSiteMap } = parse.onEnd();
-
-						this.isDecodeOrigin = isSiteMap;
-						this.forbidden = data;
-						this.setDecodeURL(href);
-					});
-			}
+					.on('end', () => resolve(parse.onEnd()))
+			);
 		} catch (error) {
 			this.subscriber.error(error);
 			this.pause();
@@ -212,7 +215,7 @@ export default class Spinney {
 	}
 
 	isXML({ headers }: AxiosResponse): boolean {
-		const isHeaderXML = (header: string) => header.indexOf('xml') !== -1;
+		const isHeaderXML = (header: string) => Not(header.indexOf('xml') === -1);
 
 		if (headers['Content-Type']) {
 			return isHeaderXML(headers['Content-Type']);
@@ -226,33 +229,42 @@ export default class Spinney {
 	}
 
 	async httpXMLOrDocument(href: string): Promise<any> {
+		const context: Context = { href };
+
+		const hrefs: string[] = [];
+		const nodes: string[] = [];
+
+		function onXMLAttribute(name: string, value: string) {
+			switch (name) {
+				case 'xmlns':
+					hrefs.push(value);
+					break;
+			}
+		}
+
+		function onHTMLAttribute(name: string, value: string) {
+			switch (name) {
+				case 'href':
+					hrefs.push(value);
+					break;
+			}
+		}
+
+		let retryAttempts = 0;
+
 		try {
-			let retryAttempts = 0;
-
-			const context: Context = { href };
-
 			const retry: () => Promise<this | any[] | undefined> = async () => {
-				const axiosInstance = axios.create(this.axiosConfig);
+				const resp = await this.axiosInstance.get(href);
+				const options = { xmlMode: this.isXML(resp) };
 
 				try {
-					const hrefs: string[] = [];
-					const nodes: string[] = [];
-
-					const resp = await axiosInstance.get(href);
-
-					const options = { xmlMode: this.isXML(resp) };
-
 					const writeStream = new WritableStream(
 						{
 							onattribute(name, value) {
 								if (options.xmlMode) {
-									console.log('XML Attribute ', name, value);
-								}
-
-								switch (name) {
-									case 'href':
-										hrefs.push(value);
-										break;
+									onXMLAttribute(name, value);
+								} else {
+									onHTMLAttribute(name, value);
 								}
 							},
 							ontext(text) {
@@ -265,9 +277,13 @@ export default class Spinney {
 						options
 					);
 
-					resp.data.pipe(writeStream).on('finish', () => {
-						this.subscriber.next(context);
-					});
+					if (Not(resp.status === 200)) {
+						throw new Error();
+					}
+
+					resp.data
+						.pipe(writeStream)
+						.on('finish', () => this.subscriber.next(context));
 
 					return this.getOriginURL(hrefs);
 				} catch (error: any) {
@@ -281,7 +297,9 @@ export default class Spinney {
 								return;
 							default:
 								retryAttempts++;
-								axiosInstance.defaults.timeout = 500;
+								await new Promise(resolve => {
+									setTimeout(resolve, 500);
+								});
 								return await retry();
 						}
 					} else {

@@ -1,14 +1,15 @@
 import { RegularExpression } from './constants';
+import { Not } from './Utils';
 
 export default class Parse {
-	href: string;
-	data: Set<string>;
+	site: string;
+	forbidden: Set<string>;
 	isParsing: boolean;
 	isSiteMap: boolean;
 
 	constructor() {
-		this.href = '';
-		this.data = new Set();
+		this.site = '';
+		this.forbidden = new Set();
 		this.isSiteMap = false;
 		this.isParsing = false;
 	}
@@ -16,9 +17,9 @@ export default class Parse {
 	onSiteMap(line: string): void {
 		if (RegularExpression.SiteMap.test(line)) {
 			const index = line.indexOf('http');
-			if (!(index === -1)) {
+			if (Not(index === -1)) {
 				this.isSiteMap = true;
-				this.href += line.slice(index);
+				this.site += line.slice(index);
 			}
 		}
 	}
@@ -26,7 +27,7 @@ export default class Parse {
 	onUserAgent(line: string): void {
 		if (RegularExpression.UserAgent.test(line)) {
 			const index = line.indexOf('*');
-			if (!(index === -1)) {
+			if (Not(index === -1)) {
 				this.isParsing = true;
 			} else {
 				this.isParsing = false;
@@ -38,8 +39,8 @@ export default class Parse {
 		if (this.isParsing) {
 			if (RegularExpression.Disallow.test(line)) {
 				const index = line.indexOf('/');
-				if (!(index === -1)) {
-					this.data.add(line.slice(index));
+				if (Not(index === -1)) {
+					this.forbidden.add(line.slice(index));
 				}
 			}
 		}
@@ -53,8 +54,8 @@ export default class Parse {
 
 	onEnd() {
 		const endOutput = {
-			data: this.data,
-			href: this.href,
+			forbidden: this.forbidden,
+			site: this.site,
 			isSiteMap: this.isSiteMap,
 		};
 

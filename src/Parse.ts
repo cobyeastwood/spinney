@@ -1,23 +1,16 @@
 import { RegularExpression } from './constants';
 
-export default class ParseLine {
+export default class Parse {
 	href: string;
-	data: string;
+	data: Set<string>;
 	isParsing: boolean;
 	isSiteMap: boolean;
 
-	constructor(data: any) {
+	constructor() {
 		this.href = '';
-		this.data = '';
+		this.data = new Set();
 		this.isSiteMap = false;
 		this.isParsing = false;
-		this.setUp(data);
-	}
-
-	private setUp(line: string) {
-		this.onSiteMap(line);
-		this.onUserAgent(line);
-		this.onDisallow(line);
 	}
 
 	onSiteMap(line: string): void {
@@ -32,8 +25,11 @@ export default class ParseLine {
 
 	onUserAgent(line: string): void {
 		if (RegularExpression.UserAgent.test(line)) {
-			if (!(line.indexOf('*') === -1)) {
+			const index = line.indexOf('*');
+			if (!(index === -1)) {
 				this.isParsing = true;
+			} else {
+				this.isParsing = false;
 			}
 		}
 	}
@@ -43,11 +39,27 @@ export default class ParseLine {
 			if (RegularExpression.Disallow.test(line)) {
 				const index = line.indexOf('/');
 				if (!(index === -1)) {
-					this.data += line.slice(index);
+					this.data.add(line.slice(index));
 				}
-			} else {
-				this.isParsing = false;
 			}
 		}
+	}
+
+	onLine(data: string) {
+		this.onSiteMap(data);
+		this.onUserAgent(data);
+		this.onDisallow(data);
+	}
+
+	onEnd() {
+		const endOutput = {
+			data: this.data,
+			href: this.href,
+			isSiteMap: this.isSiteMap,
+		};
+
+		Object.assign(this, new Parse());
+
+		return endOutput;
 	}
 }

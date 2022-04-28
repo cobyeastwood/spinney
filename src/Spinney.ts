@@ -30,6 +30,7 @@ export default class Spinney {
 	}
 
 	private async _setUp(hrefs: string[]): Promise<void> {
+		console.log('setUp ', hrefs);
 		if (this.isEmpty(hrefs)) {
 			this.subscriber.complete();
 			this.pause();
@@ -38,7 +39,7 @@ export default class Spinney {
 
 		if (this.isProcessing) {
 			const nextHrefs: string[] = await Promise.all(
-				hrefs.map(href => href && this.httpXMLOrDocument(href))
+				hrefs.filter(Boolean).map(href => this.httpXMLOrDocument(href))
 			);
 			await this._setUp(nextHrefs.flat(1));
 		}
@@ -268,7 +269,9 @@ export default class Spinney {
 								}
 							},
 							ontext(text) {
-								nodes.push(text);
+								if (Not(options.xmlMode)) {
+									nodes.push(text);
+								}
 							},
 							onend() {
 								context.nodes = nodes;
@@ -281,11 +284,14 @@ export default class Spinney {
 						throw new Error();
 					}
 
-					resp.data
-						.pipe(writeStream)
-						.on('finish', () => this.subscriber.next(context));
+					resp.data.pipe(writeStream);
 
-					return this.getOriginURL(hrefs);
+					return await new Promise(resolve =>
+						writeStream.on('finish', () => {
+							this.subscriber.next(context);
+							resolve(this.getOriginURL(hrefs));
+						})
+					);
 				} catch (error: any) {
 					if (retryAttempts >= MAX_RETRIES) {
 						throw error;

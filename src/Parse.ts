@@ -1,5 +1,5 @@
 import { RegularExpression } from './constants';
-import { Not } from './Utils';
+import Not from './utils/Not';
 
 export default class Parse {
 	site: string;
@@ -45,7 +45,6 @@ export default class Parse {
 			}
 		}
 	}
-
 	onLine(data: string) {
 		this.onSiteMap(data);
 		this.onUserAgent(data);

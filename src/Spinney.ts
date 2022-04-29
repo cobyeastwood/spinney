@@ -1,4 +1,9 @@
-import axios, { Axios, AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, {
+	Axios,
+	AxiosRequestConfig,
+	AxiosResponse,
+	AxiosResponseHeaders,
+} from 'axios';
 import { Observable } from 'rxjs';
 import { WritableStream } from 'htmlparser2/lib/WritableStream';
 
@@ -6,7 +11,8 @@ import { Context, Options } from './types';
 import { MAX_RETRIES, RegularExpression } from './constants';
 import Parse from './Parse';
 
-import { Not } from './Utils';
+import Not from './utils/Not';
+import ExistNot from './utils/ExistNot';
 
 export default class Spinney {
 	private axiosInstance: Axios;
@@ -30,7 +36,6 @@ export default class Spinney {
 	}
 
 	private async _setUp(hrefs: string[]): Promise<void> {
-		console.log('setUp ', hrefs);
 		if (this.isEmpty(hrefs)) {
 			this.subscriber.complete();
 			this.pause();
@@ -52,14 +57,12 @@ export default class Spinney {
 			this.setForbidden(context);
 			this.resume();
 
-			console.log(context.isSiteMap, context.site, this.decodeURL.origin);
+			const hrefs = Array(
+				context.isSiteMap ? context.site : this.decodeURL.origin
+			);
 
-			await this._setUp([
-				context.isSiteMap ? context.site : this.decodeURL.origin,
-			]);
-		} catch (e) {
-			console.log('err ', e);
-		}
+			await this._setUp(hrefs);
+		} catch {}
 	}
 
 	setForbidden({ forbidden }: { forbidden: Set<string> }) {
@@ -92,7 +95,7 @@ export default class Spinney {
 	}
 
 	spin(keys: string | string[]): Observable<any> {
-		if (!keys) {
+		if (ExistNot(keys)) {
 			throw this.newError(this.spin, keys);
 		}
 
@@ -215,79 +218,59 @@ export default class Spinney {
 		}
 	}
 
-	isXML({ headers }: AxiosResponse): boolean {
-		const isHeaderXML = (header: string) => Not(header.indexOf('xml') === -1);
+	isHeaderXML(headers: AxiosResponseHeaders): boolean {
+		const isXML = (header: string) => Not(header.indexOf('xml') === -1);
 
 		if (headers['Content-Type']) {
-			return isHeaderXML(headers['Content-Type']);
+			return isXML(headers['Content-Type']);
 		}
 
 		if (headers['content-type']) {
-			return isHeaderXML(headers['content-type']);
+			return isXML(headers['content-type']);
 		}
 
 		return false;
 	}
 
 	async httpXMLOrDocument(href: string): Promise<any> {
-		const context: Context = { href };
-
-		const hrefs: string[] = [];
-		const nodes: string[] = [];
-
-		function onXMLAttribute(name: string, value: string) {
-			switch (name) {
-				case 'xmlns':
-					hrefs.push(value);
-					break;
-			}
-		}
-
-		function onHTMLAttribute(name: string, value: string) {
-			switch (name) {
-				case 'href':
-					hrefs.push(value);
-					break;
-			}
-		}
-
 		let retryAttempts = 0;
 
 		try {
 			const retry: () => Promise<this | any[] | undefined> = async () => {
-				const resp = await this.axiosInstance.get(href);
-				const options = { xmlMode: this.isXML(resp) };
+				const { data, headers, status } = await this.axiosInstance.get(href);
 
 				try {
-					const writeStream = new WritableStream(
-						{
-							onattribute(name, value) {
-								if (options.xmlMode) {
-									onXMLAttribute(name, value);
-								} else {
-									onHTMLAttribute(name, value);
-								}
-							},
-							ontext(text) {
-								if (Not(options.xmlMode)) {
-									nodes.push(text);
-								}
-							},
-							onend() {
-								context.nodes = nodes;
-							},
-						},
-						options
-					);
+					const context: Context = { href };
 
-					if (Not(resp.status === 200)) {
+					const hrefs: string[] = [];
+					const nodes: string[] = [];
+
+					if (Not(status === 200)) {
 						throw new Error();
 					}
 
-					resp.data.pipe(writeStream);
+					if (this.isHeaderXML(headers)) {
+						return Promise.resolve(undefined);
+					}
 
-					return await new Promise(resolve =>
-						writeStream.on('finish', () => {
+					const writeStream = new WritableStream({
+						onattribute(name, value) {
+							switch (name) {
+								case 'href':
+									hrefs.push(value);
+									break;
+							}
+						},
+						ontext(text) {
+							nodes.push(text);
+						},
+						onend() {
+							context.nodes = nodes;
+						},
+					});
+
+					return new Promise(resolve =>
+						data.pipe(writeStream).on('finish', () => {
 							this.subscriber.next(context);
 							resolve(this.getOriginURL(hrefs));
 						})

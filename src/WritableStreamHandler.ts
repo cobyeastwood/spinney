@@ -1,8 +1,8 @@
 import { Handler, Parser } from 'htmlparser2/lib/Parser';
 
 export default class WritableStreamHandler implements Handler {
-	cbs: any;
-	context: any;
+	public context: any;
+	private cbs: any;
 
 	constructor(cbs: any) {
 		this.cbs = cbs;

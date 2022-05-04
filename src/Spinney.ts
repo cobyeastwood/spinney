@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { Writable } from 'stream';
 import { WritableStream } from 'htmlparser2/lib/WritableStream';
 
-import { Context, Options } from './types';
+import { Options } from './types';
 import { MAX_RETRIES, RegularExpression } from './constants';
 import { ParseText, ParseXML } from './Parse';
 
@@ -32,7 +32,9 @@ export default class Spinney extends Observable<any> {
 		});
 
 		this.cbs = options?.cbs ?? {};
-		this.axiosInstance = axios.create(config || { responseType: 'stream' });
+		this.axiosInstance = axios.create(
+			Object.assign(config || {}, { responseType: 'stream' })
+		);
 		this.isOverideOn = !!options?.overide;
 		this.isProcessing = false;
 		this.forbidden = new Set();
@@ -226,11 +228,6 @@ export default class Spinney extends Observable<any> {
 				try {
 					const { data, headers, status } = await this.axiosInstance.get(href);
 
-					const context: Context = { href };
-
-					const hrefs: string[] = [];
-					const nodes: string[] = [];
-
 					if (Not(status === 200)) {
 						throw new Error();
 					}
@@ -265,8 +262,8 @@ export default class Spinney extends Observable<any> {
 
 					return new Promise(resolve =>
 						data.pipe(new WritableStream(handler)).on('finish', () => {
-							this.subscriber.next(context);
-							resolve(this.getApprovedURL(hrefs));
+							this.subscriber.next(handler.context);
+							resolve(this.getApprovedURL(handler.context.hrefs));
 						})
 					);
 				} catch (error: any) {

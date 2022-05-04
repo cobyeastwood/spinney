@@ -1,16 +1,15 @@
-import axios, {
-	Axios,
-	AxiosRequestConfig,
-	AxiosResponse,
-	AxiosResponseHeaders,
-} from 'axios';
+import axios, { Axios, AxiosRequestConfig, AxiosResponseHeaders } from 'axios';
 import { Observable } from 'rxjs';
+
+import { Writable } from 'stream';
 import { WritableStream } from 'htmlparser2/lib/WritableStream';
 
 import { Context, Options } from './types';
 import { MAX_RETRIES, RegularExpression } from './constants';
-import Parse from './Parse';
+import { ParseText, ParseXML } from './Parse';
 
+import StringWriter from './utils/StringWriter';
+import CommonError from './utils/CommonError';
 import Not from './utils/Not';
 import ExistNot from './utils/ExistNot';
 
@@ -69,12 +68,6 @@ export default class Spinney {
 		this.forbidden = forbidden;
 	}
 
-	newError(method: Function, parameter: any): Error {
-		return new Error(
-			`${method.name} received unexpected parameter of type ${typeof parameter}`
-		);
-	}
-
 	resume(): void {
 		this.isProcessing = true;
 	}
@@ -96,7 +89,7 @@ export default class Spinney {
 
 	spin(keys: string | string[]): Observable<any> {
 		if (ExistNot(keys)) {
-			throw this.newError(this.spin, keys);
+			throw new CommonError(this.spin, keys);
 		}
 
 		return new Observable(subscriber => {
@@ -149,7 +142,7 @@ export default class Spinney {
 
 	getURL(pathname: string): string {
 		if (Not(typeof pathname === 'string')) {
-			throw this.newError(this.getURL, pathname);
+			throw new CommonError(this.getURL, pathname);
 		}
 
 		if (pathname.startsWith('/')) {
@@ -194,23 +187,20 @@ export default class Spinney {
 		return originURLs;
 	}
 
-	async httpText(pathname: string): Promise<void | any> {
+	async httpText(pathname: string): Promise<any> {
 		try {
 			const resp = await this.axiosInstance.get(this.getURL(pathname));
 
 			if (Not(resp.status === 200)) {
-				return Promise.reject();
+				return Promise.reject(new CommonError(this.httpText, resp.status));
 			}
 
-			const parse = new Parse();
+			const parse = new ParseText();
+
 			return new Promise(resolve =>
 				resp.data
-					.on('data', (chunk: Buffer) => {
-						for (const line of String(chunk).split(/\r?\n/)) {
-							parse.onLine(line);
-						}
-					})
-					.on('end', () => resolve(parse.onEnd()))
+					.on('data', (chunk: Buffer) => parse.write(chunk))
+					.on('end', () => resolve(parse.end()))
 			);
 		} catch (error) {
 			this.subscriber.error(error);
@@ -236,10 +226,10 @@ export default class Spinney {
 		let retryAttempts = 0;
 
 		try {
-			const retry: () => Promise<this | any[] | undefined> = async () => {
-				const { data, headers, status } = await this.axiosInstance.get(href);
-
+			const retry: () => Promise<any> = async () => {
 				try {
+					const { data, headers, status } = await this.axiosInstance.get(href);
+
 					const context: Context = { href };
 
 					const hrefs: string[] = [];
@@ -250,7 +240,29 @@ export default class Spinney {
 					}
 
 					if (this.isHeaderXML(headers)) {
-						return Promise.resolve(undefined);
+						const writer = new StringWriter();
+
+						return new Promise(resolve =>
+							data
+								.pipe(
+									new Writable({
+										write(chunk, encoding) {
+											writer.write(chunk, encoding);
+										},
+										final(cb) {
+											writer.final();
+											cb();
+										},
+									})
+								)
+								.on('finish', async () => {
+									const parse = new ParseXML();
+									await parse.write(writer.string).then(() => {
+										const output = parse.end();
+										resolve(output?.sites);
+									});
+								})
+						);
 					}
 
 					const writeStream = new WritableStream({

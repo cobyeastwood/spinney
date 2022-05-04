@@ -1,36 +1,37 @@
-import axios, { AxiosResponse } from 'axios';
+import axios, { Axios, AxiosRequestConfig, AxiosResponseHeaders } from 'axios';
 import { Observable } from 'rxjs';
-import ParseXML from './ParseXML';
-import ParseDocument from './ParseDocument';
-import ParseText from './ParseText';
-import Format from './Format';
+
+import { Writable } from 'stream';
+import { WritableStream } from 'htmlparser2/lib/WritableStream';
 
 import { Context, Options } from './types';
-import { MAX_RETRIES, RegularExpression, Attribute } from './constants';
+import { MAX_RETRIES, RegularExpression } from './constants';
+import { ParseText, ParseXML } from './Parse';
+
+import StringWriter from './utils/StringWriter';
+import CommonError from './utils/CommonError';
+import Not from './utils/Not';
+import ExistNot from './utils/ExistNot';
 
 export default class Spinney {
+	private axiosInstance: Axios;
 	private isOverideOn: boolean;
-	private isSiteMap: boolean;
-	private siteMap: string;
 	private isProcessing: boolean;
-	private noFetchPaths: string[];
+	private forbidden: Set<string>;
 	private href: string;
 	private seen: Set<string>;
-	private decodedURL: URL;
+	private decodeURL: URL;
 	private subscriber: any;
-	private keys: string[];
 
-	constructor(href: string, options?: Options) {
+	constructor(href: string, options?: Options, config?: AxiosRequestConfig) {
+		this.axiosInstance = axios.create(config || { responseType: 'stream' });
 		this.isOverideOn = !!options?.overide;
-		this.isSiteMap = false;
-		this.siteMap = '';
 		this.isProcessing = false;
-		this.noFetchPaths = [];
+		this.forbidden = new Set();
 		this.seen = new Set();
 		this.href = href;
-		this.decodedURL = new URL(href);
+		this.decodeURL = new URL(href);
 		this.subscriber;
-		this.keys = [];
 	}
 
 	private async _setUp(hrefs: string[]): Promise<void> {
@@ -42,30 +43,29 @@ export default class Spinney {
 
 		if (this.isProcessing) {
 			const nextHrefs: string[] = await Promise.all(
-				hrefs.filter(Boolean).map(href => this.fetchXMLOrDocument(href))
+				hrefs.filter(Boolean).map(href => this.httpXMLOrDocument(href))
 			);
 			await this._setUp(nextHrefs.flat(1));
 		}
 	}
 
 	private async setUp(): Promise<void> {
-		await this.fetchText('/robots.txt');
+		try {
+			const context = await this.httpText('/robots.txt');
 
-		let href;
+			this.setForbidden(context);
+			this.resume();
 
-		if (this.isSiteMap) {
-			href = this.siteMap;
-		} else {
-			href = this.decodedURL.origin;
-		}
+			const hrefs = Array(
+				context.isSiteMap ? context.site : this.decodeURL.origin
+			);
 
-		await this._setUp([href]);
+			await this._setUp(hrefs);
+		} catch {}
 	}
 
-	newError(method: Function, parameter: any): Error {
-		return new Error(
-			`${method.name} received unexpected parameter of type ${typeof parameter}`
-		);
+	setForbidden({ forbidden }: { forbidden: Set<string> }) {
+		this.forbidden = forbidden;
 	}
 
 	resume(): void {
@@ -84,20 +84,17 @@ export default class Spinney {
 	}
 
 	isEmpty(data: any): boolean {
-		return !Array.isArray(data) || data.length === 0;
+		return Not(Array.isArray(data)) || data.length === 0;
 	}
 
 	spin(keys: string | string[]): Observable<any> {
-		if (!keys) {
-			throw this.newError(this.spin, keys);
+		if (ExistNot(keys)) {
+			throw new CommonError(this.spin, keys);
 		}
-
-		this.keys = this.toArray(keys);
 
 		return new Observable(subscriber => {
 			this.subscriber = subscriber;
 
-			this.resume();
 			this.setUp();
 
 			return () => {
@@ -107,26 +104,26 @@ export default class Spinney {
 	}
 
 	getRegExp(pathname: string): RegExp {
-		return new RegExp(`(.*\.)?${this.decodedURL.hostname}.*(${pathname})`);
+		return new RegExp(`(.*\.)?${this.decodeURL.hostname}.*(${pathname})`);
 	}
 
 	isMatch(testPathName: string, basePathName: string) {
 		if (RegularExpression.ForwardSlashWord.test(testPathName)) {
 			const index = testPathName.indexOf('/');
-			if (index === -1) {
-				return this.getRegExp(testPathName).test(basePathName);
+			if (Not(index === -1)) {
+				return this.getRegExp(testPathName.slice(index)).test(basePathName);
 			}
-			return this.getRegExp(testPathName.slice(index)).test(basePathName);
+			return this.getRegExp(testPathName).test(basePathName);
 		}
 		return false;
 	}
 
-	isMatchYesFetch(href: string): boolean {
+	_isForbidden(href: string): boolean {
 		if (this.isOverideOn) {
 			return true;
 		}
 
-		for (const path of this.noFetchPaths) {
+		for (const path of this.forbidden) {
 			if (this.isMatch(path, href)) {
 				return false;
 			}
@@ -135,21 +132,21 @@ export default class Spinney {
 		return true;
 	}
 
-	isYesFetch(href: string): boolean {
-		if (!this.seen.has(href)) {
+	isForbidden(href: string): boolean {
+		if (Not(this.seen.has(href))) {
 			this.seen.add(href);
-			return this.isMatchYesFetch(href);
+			return this._isForbidden(href);
 		}
 		return false;
 	}
 
 	getURL(pathname: string): string {
-		if (!(typeof pathname === 'string')) {
-			throw this.newError(this.getURL, pathname);
+		if (Not(typeof pathname === 'string')) {
+			throw new CommonError(this.getURL, pathname);
 		}
 
 		if (pathname.startsWith('/')) {
-			const newURL = new URL(this.href, this.decodedURL);
+			const newURL = new URL(this.href, this.decodeURL);
 			if (pathname.charAt(1) === '/') {
 				newURL.pathname = pathname.slice(1);
 			} else {
@@ -163,14 +160,14 @@ export default class Spinney {
 
 	isOrigin(href: string): boolean {
 		try {
-			const decodedURL = new URL(href);
+			const decodeURL = new URL(href);
 
-			if (decodedURL.hostname.startsWith(this.decodedURL.hostname)) {
-				return this.isYesFetch(decodedURL.toString());
+			if (decodeURL.hostname.startsWith(this.decodeURL.hostname)) {
+				return this.isForbidden(decodeURL.toString());
 			}
 
-			if (decodedURL.origin.startsWith(this.decodedURL.origin)) {
-				return this.isYesFetch(decodedURL.toString());
+			if (decodeURL.origin.startsWith(this.decodeURL.origin)) {
+				return this.isForbidden(decodeURL.toString());
 			}
 		} catch {}
 
@@ -178,81 +175,118 @@ export default class Spinney {
 	}
 
 	getOriginURL(hrefs: string[]): any[] {
-		return hrefs
-			.map(href => this.getURL(href))
-			.filter(href => href && this.isOrigin(href));
+		const originURLs = [];
+
+		for (const href of hrefs) {
+			const URL = this.getURL(href);
+			if (URL && this.isOrigin(URL)) {
+				originURLs.push(URL);
+			}
+		}
+
+		return originURLs;
 	}
 
-	isOnce = true;
-
-	async fetchText(pathname: string): Promise<void> {
+	async httpText(pathname: string): Promise<any> {
 		try {
-			const resp: AxiosResponse = await axios.get(this.getURL(pathname));
+			const resp = await this.axiosInstance.get(this.getURL(pathname));
 
-			if (resp.status === 200) {
-				let texts;
-				if ((texts = resp.data.match(RegularExpression.NewLine))) {
-					const txt = new ParseText(texts);
-
-					this.isSiteMap = txt.isSiteMap;
-					this.siteMap = txt.href;
-
-					if (this.isOverideOn) {
-						return;
-					}
-
-					if (this.isOnce) {
-						this.isOnce = false;
-						this.noFetchPaths = txt.data;
-					}
-				}
+			if (Not(resp.status === 200)) {
+				return Promise.reject(new CommonError(this.httpText, resp.status));
 			}
+
+			const parse = new ParseText();
+
+			return new Promise(resolve =>
+				resp.data
+					.on('data', (chunk: Buffer) => parse.write(chunk))
+					.on('end', () => resolve(parse.end()))
+			);
 		} catch (error) {
 			this.subscriber.error(error);
 			this.pause();
 		}
 	}
 
-	isXML({ headers }: AxiosResponse): boolean {
-		const isHeaderXML = (header: string) => header.indexOf('xml') !== -1;
+	isHeaderXML(headers: AxiosResponseHeaders): boolean {
+		const isXML = (header: string) => Not(header.indexOf('xml') === -1);
 
 		if (headers['Content-Type']) {
-			return isHeaderXML(headers['Content-Type']);
+			return isXML(headers['Content-Type']);
 		}
 
 		if (headers['content-type']) {
-			return isHeaderXML(headers['content-type']);
+			return isXML(headers['content-type']);
 		}
 
 		return false;
 	}
 
-	async fetchXMLOrDocument(href: string): Promise<any> {
+	async httpXMLOrDocument(href: string): Promise<any> {
+		let retryAttempts = 0;
+
 		try {
-			let retryAttempts = 0;
-
-			const context: Context = { href };
-
-			const retry: () => Promise<this | any[] | undefined> = async () => {
+			const retry: () => Promise<any> = async () => {
 				try {
-					const resp: AxiosResponse = await axios.get(href);
+					const { data, headers, status } = await this.axiosInstance.get(href);
 
-					let hrefs;
+					const context: Context = { href };
 
-					if (this.isXML(resp)) {
-						const xml = await new ParseXML(resp.data).findHrefs();
-						hrefs = xml.hrefs;
-					} else {
-						const doc = new ParseDocument(resp.data).find(
-							this.keys,
-							Attribute.Href
-						);
-						hrefs = doc.hrefs;
-						context.nodes = new Format(doc.nodes).getNodes();
+					const hrefs: string[] = [];
+					const nodes: string[] = [];
+
+					if (Not(status === 200)) {
+						throw new Error();
 					}
 
-					this.subscriber.next(context);
-					return this.getOriginURL(hrefs);
+					if (this.isHeaderXML(headers)) {
+						const writer = new StringWriter();
+
+						return new Promise(resolve =>
+							data
+								.pipe(
+									new Writable({
+										write(chunk, encoding) {
+											writer.write(chunk, encoding);
+										},
+										final(cb) {
+											writer.final();
+											cb();
+										},
+									})
+								)
+								.on('finish', async () => {
+									const parse = new ParseXML();
+									await parse.write(writer.string).then(() => {
+										const output = parse.end();
+										resolve(output?.sites);
+									});
+								})
+						);
+					}
+
+					const writeStream = new WritableStream({
+						onattribute(name, value) {
+							switch (name) {
+								case 'href':
+									hrefs.push(value);
+									break;
+							}
+						},
+						ontext(text) {
+							nodes.push(text);
+						},
+						onend() {
+							context.nodes = nodes;
+						},
+					});
+
+					return new Promise(resolve =>
+						data.pipe(writeStream).on('finish', () => {
+							this.subscriber.next(context);
+							resolve(this.getOriginURL(hrefs));
+						})
+					);
 				} catch (error: any) {
 					if (retryAttempts >= MAX_RETRIES) {
 						throw error;
@@ -264,8 +298,8 @@ export default class Spinney {
 								return;
 							default:
 								retryAttempts++;
-								await new Promise(function (resolve) {
-									return setTimeout(resolve, 500);
+								await new Promise(resolve => {
+									setTimeout(resolve, 500);
 								});
 								return await retry();
 						}

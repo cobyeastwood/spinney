@@ -1,6 +1,6 @@
 ## Spinney
 
-A simple and nimble web scraper.
+An efficient and flexible web scraper.
 
 ### Basic Example
 
@@ -10,7 +10,7 @@ const Spinney = require('spinney');
 // Register an endpoint to scrape
 const spinney = new Spinney('https://google.com/');
 
-// Begin harvesting on provided keys
+// Begin process on provided keys
 const observable = spinney.spin(['foo', 'bar']);
 
 // Subscribe to key changes

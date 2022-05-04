@@ -11,7 +11,7 @@ const RegularExpression = {
 	NewLine: /[^\r\n]+/g,
 	SiteMap: /^([Ss]itemap:) (.+)$/,
 	SpecialCharacter: /[^a-zA-Z0-9 ]/g,
-	UserAgent: /^([Uu]ser-agent:) (.+)$/g,
+	UserAgent: /^([Uu]ser-[Aa]gent:) (.+)$/g,
 	ForwardSlashWord: /\/(\w+)/gi,
 	HttpOrHttps:
 		/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)?/gi,

@@ -1,6 +1,6 @@
 import { NodeWithChildren, Node, Document, Element } from 'domhandler';
 
-type Options = { overide?: boolean; cbs?: any };
+type Options = { overide?: boolean };
 
 type Callback = (node: NodeElement) => void;
 

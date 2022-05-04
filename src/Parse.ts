@@ -1,5 +1,5 @@
 import { parseStringPromise } from 'xml2js';
-import { RegularExpression } from './constants';
+import { RegExps } from './constants';
 import Not from './utils/Not';
 
 export class ParseXML {
@@ -15,13 +15,13 @@ export class ParseXML {
 
 			if (raw?.sitemapindex?.sitemap) {
 				for (const site of raw.sitemapindex.sitemap) {
-					if (site.loc[0]) {
+					if (site?.loc?.[0]) {
 						this.sites.push(site.loc[0]);
 					}
 				}
 			} else if (raw?.urlset?.url) {
 				for (const site of raw.urlset.url) {
-					if (site.loc[0]) {
+					if (site?.loc?.[0]) {
 						this.sites.push(site.loc[0]);
 					}
 				}
@@ -30,9 +30,7 @@ export class ParseXML {
 	}
 
 	end() {
-		const endOutput = {
-			sites: this.sites,
-		};
+		const endOutput = this.sites;
 
 		Object.assign(this, new ParseXML());
 
@@ -54,7 +52,7 @@ export class ParseText {
 	}
 
 	onSiteMap(line: string): void {
-		if (RegularExpression.SiteMap.test(line)) {
+		if (RegExps.SiteMap.test(line)) {
 			const index = line.indexOf('http');
 			if (Not(index === -1)) {
 				this.isSiteMap = true;
@@ -64,7 +62,7 @@ export class ParseText {
 	}
 
 	onUserAgent(line: string): void {
-		if (RegularExpression.UserAgent.test(line)) {
+		if (RegExps.UserAgent.test(line)) {
 			const index = line.indexOf('*');
 			if (Not(index === -1)) {
 				this.isParsing = true;
@@ -76,7 +74,7 @@ export class ParseText {
 
 	onDisallow(line: string): void {
 		if (this.isParsing) {
-			if (RegularExpression.Disallow.test(line)) {
+			if (RegExps.Disallow.test(line)) {
 				const index = line.indexOf('/');
 				if (Not(index === -1)) {
 					this.forbidden.add(line.slice(index));
@@ -86,7 +84,7 @@ export class ParseText {
 	}
 
 	write(chunk: Buffer): void {
-		const newLines = new String(chunk).split(RegularExpression.NewLine);
+		const newLines = new String(chunk).split(RegExps.NewLine);
 
 		for (const newLine of newLines) {
 			this.onSiteMap(newLine);

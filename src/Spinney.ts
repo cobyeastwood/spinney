@@ -1,84 +1,90 @@
 import axios, { Axios, AxiosRequestConfig, AxiosResponseHeaders } from 'axios';
-import { Observable } from 'rxjs';
 
 import { Writable } from 'stream';
 import { WritableStream } from 'htmlparser2/lib/WritableStream';
 
 import { Options } from './types';
-import { MAX_RETRIES, RegularExpression } from './constants';
+import { MAX_RETRIES, RegExps } from './constants';
 import { ParseText, ParseXML } from './Parse';
 
-import WritableStreamHandler, { Handler } from './WritableStreamHandler';
+import WritableStreamHandler from './WritableStreamHandler';
 import StringWriter from './utils/StringWriter';
 import CommonError from './utils/CommonError';
 import Not from './utils/Not';
+import { Observable, Subscription } from 'rxjs';
 
 export default class Spinney extends Observable<any> {
-	public subscribe: any;
 	private handler: any;
 	private axiosInstance: Axios;
 	private isOverideOn: boolean;
 	private isProcessing: boolean;
 	private forbidden: Set<string>;
-	private href: string;
+	private site: string;
 	private seen: Set<string>;
 	private decodeURL: URL;
 	private subscriber: any;
 
-	constructor(href: string, options?: Options, config?: AxiosRequestConfig) {
+	constructor(site: string, options?: Options, config?: AxiosRequestConfig) {
 		super((subscriber: any) => {
 			this.subscriber = subscriber;
 			this.setUp();
 		});
 
 		this.axiosInstance = axios.create(
-			Object.assign(config || {}, { responseType: 'stream' })
+			Object.assign({ responseType: 'stream' }, config || {})
 		);
 		this.isOverideOn = !!options?.overide;
 		this.isProcessing = false;
 		this.forbidden = new Set();
 		this.seen = new Set();
-		this.href = href;
-		this.decodeURL = new URL(href);
-		this.subscriber;
+		this.site = site;
+		this.decodeURL = new URL(site);
 	}
 
-	private async _setUp(hrefs: string[]): Promise<void> {
-		if (this.isEmpty(hrefs)) {
+	override subscribe(options: any): Subscription {
+		const noop = () => {};
+		const {
+			next = noop,
+			error = noop,
+			complete = noop,
+			...cbs
+		} = options || {};
+		this.handler = new WritableStreamHandler(cbs);
+		return super.subscribe({ next, error, complete });
+	}
+
+	private async _setUp(sites: string[]): Promise<void> {
+		if (this.isArrayEmpty(sites)) {
 			this.subscriber.complete();
 			this.pause();
 			return;
 		}
 
 		if (this.isProcessing) {
-			const nextHrefs: string[] = await Promise.all(
-				hrefs.filter(Boolean).map(href => this.httpXMLOrDocument(href))
+			const sitesBatch = await Promise.all(
+				sites.filter(Boolean).map(this.httpXMLOrDocument)
 			);
-			await this._setUp(nextHrefs.flat(1));
+			await this._setUp(sitesBatch.flat(1));
 		}
 	}
 
-	private setUp() {
+	private setUp(): () => void {
 		try {
 			this.httpText('/robots.txt').then(context => {
 				this.setForbidden(context);
 				this.resume();
 
-				const hrefs = Array(
+				const sites = Array(
 					context.isSiteMap ? context.site : this.decodeURL.origin
 				);
 
-				this._setUp(hrefs);
+				this._setUp(sites);
 			});
 		} catch {}
 
 		return () => {
 			this.pause();
 		};
-	}
-
-	setForbidden({ forbidden }: { forbidden: Set<string> }) {
-		this.forbidden = forbidden;
 	}
 
 	resume(): void {
@@ -96,21 +102,23 @@ export default class Spinney extends Observable<any> {
 		return [data];
 	}
 
-	isEmpty(data: any): boolean {
+	isArrayEmpty(data: any): boolean {
 		return Not(Array.isArray(data)) || data.length === 0;
 	}
 
-	getRegExp(pathname: string): RegExp {
-		return new RegExp(`(.*\.)?${this.decodeURL.hostname}.*(${pathname})`);
-	}
-
-	isMatch(testPathName: string, basePathName: string) {
-		if (RegularExpression.ForwardSlashWord.test(testPathName)) {
-			const index = testPathName.indexOf('/');
+	isMatch(testPathname: string, basePathname: string): boolean {
+		if (RegExps.ForwardSlashWord.test(testPathname)) {
+			const index = testPathname.indexOf('/');
+			const hostname = this.decodeURL.hostname;
 			if (Not(index === -1)) {
-				return this.getRegExp(testPathName.slice(index)).test(basePathName);
+				const pathname = testPathname.slice(index);
+				return RegExps.getHostnameAndPathname(hostname, pathname).test(
+					basePathname
+				);
 			}
-			return this.getRegExp(testPathName).test(basePathName);
+			return RegExps.getHostnameAndPathname(hostname, testPathname).test(
+				basePathname
+			);
 		}
 		return false;
 	}
@@ -129,12 +137,16 @@ export default class Spinney extends Observable<any> {
 		return true;
 	}
 
-	isForbidden(href: string): boolean {
-		if (Not(this.seen.has(href))) {
-			this.seen.add(href);
-			return this._isForbidden(href);
+	isForbidden(site: string): boolean {
+		if (Not(this.seen.has(site))) {
+			this.seen.add(site);
+			return this._isForbidden(site);
 		}
 		return false;
+	}
+
+	setForbidden({ forbidden }: { forbidden: Set<string> }) {
+		this.forbidden = forbidden;
 	}
 
 	getURL(pathname: string): string {
@@ -143,7 +155,7 @@ export default class Spinney extends Observable<any> {
 		}
 
 		if (pathname.startsWith('/')) {
-			const newURL = new URL(this.href, this.decodeURL);
+			const newURL = new URL(this.site, this.decodeURL);
 			if (pathname.charAt(1) === '/') {
 				newURL.pathname = pathname.slice(1);
 			} else {
@@ -155,9 +167,9 @@ export default class Spinney extends Observable<any> {
 		return pathname;
 	}
 
-	isApproved(href: string): boolean {
+	isApproved(site: string): boolean {
 		try {
-			const decodeURL = new URL(href);
+			const decodeURL = new URL(site);
 
 			if (decodeURL.hostname.startsWith(this.decodeURL.hostname)) {
 				return this.isForbidden(decodeURL.toString());
@@ -171,17 +183,8 @@ export default class Spinney extends Observable<any> {
 		return false;
 	}
 
-	getApprovedURL(hrefs: string[]): any[] {
-		const approved = [];
-
-		for (const href of hrefs) {
-			const URL = this.getURL(href);
-			if (URL && this.isApproved(URL)) {
-				approved.push(URL);
-			}
-		}
-
-		return approved;
+	getApprovedURL(hrefs: string[]): string[] {
+		return hrefs.map(this.getURL).filter(url => url && this.isApproved(url));
 	}
 
 	async httpText(pathname: string): Promise<any> {
@@ -194,11 +197,11 @@ export default class Spinney extends Observable<any> {
 
 			const parse = new ParseText();
 
-			return new Promise(resolve =>
-				resp.data
-					.on('data', (chunk: Buffer) => parse.write(chunk))
-					.on('end', () => resolve(parse.end()))
-			);
+			await new Promise(resolve => {
+				resp.data.on('data', parse.write).on('end', resolve);
+			});
+
+			return parse.end();
 		} catch (error) {
 			this.subscriber.error(error);
 			this.pause();
@@ -219,17 +222,13 @@ export default class Spinney extends Observable<any> {
 		return false;
 	}
 
-	configure(cbs: Handler) {
-		this.handler = new WritableStreamHandler(cbs);
-	}
-
-	async httpXMLOrDocument(href: string): Promise<any> {
-		let retryAttempts = 0;
+	async httpXMLOrDocument(site: string): Promise<any> {
+		let retries = 0;
 
 		try {
 			const retry: () => Promise<any> = async () => {
 				try {
-					const { data, headers, status } = await this.axiosInstance.get(href);
+					const { data, headers, status } = await this.axiosInstance.get(site);
 
 					if (Not(status === 200)) {
 						throw new Error();
@@ -237,8 +236,7 @@ export default class Spinney extends Observable<any> {
 
 					if (this.isHeaderXML(headers)) {
 						const writer = new StringWriter();
-
-						return new Promise(resolve =>
+						return new Promise(resolve => {
 							data
 								.pipe(
 									new Writable({
@@ -253,24 +251,21 @@ export default class Spinney extends Observable<any> {
 								)
 								.on('finish', async () => {
 									const parse = new ParseXML();
-									await parse.write(writer.string).then(() => {
-										const output = parse.end();
-										resolve(output?.sites);
-									});
-								})
-						);
+									await parse.write(writer.string);
+									return resolve(parse.end());
+								});
+						});
 					}
 
-					return new Promise(resolve =>
+					return new Promise(resolve => {
 						data.pipe(new WritableStream(this.handler)).on('finish', () => {
-							const { hrefs } = this.handler.context;
-							this.subscriber.next(href);
-							// add extend subscriber with callbacks
-							resolve(this.getApprovedURL(hrefs));
-						})
-					);
+							const sites = this.handler.context.sites;
+							this.subscriber.next(site);
+							resolve(this.getApprovedURL(sites));
+						});
+					});
 				} catch (error: any) {
-					if (retryAttempts >= MAX_RETRIES) {
+					if (retries >= MAX_RETRIES) {
 						throw error;
 					}
 
@@ -279,7 +274,7 @@ export default class Spinney extends Observable<any> {
 							case 404:
 								return;
 							default:
-								retryAttempts++;
+								retries++;
 								await new Promise(resolve => {
 									setTimeout(resolve, 500);
 								});

@@ -4,7 +4,7 @@ const Attribute = {
 	Href: 'href',
 };
 
-const RegularExpression = {
+const RegExps = {
 	Allow: /^([Aa]llow:) (\/.+)$/g,
 	Disallow: /^([Dd]isallow:) (\/.+)$/g,
 	Host: /^([Hh]ost:) (.+)$/g,
@@ -15,6 +15,8 @@ const RegularExpression = {
 	ForwardSlashWord: /\/(\w+)/gi,
 	HttpOrHttps:
 		/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)?/gi,
+	getHostnameAndPathname: (hostname: string, pathname: string) =>
+		new RegExp(`(.*\.)?${hostname}.*(${pathname})`),
 };
 
-export { MAX_RETRIES, RegularExpression, Attribute };
+export { MAX_RETRIES, RegExps, Attribute };

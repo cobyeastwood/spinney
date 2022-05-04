@@ -8,13 +8,13 @@ export default class WritableStreamHandler implements Handler {
 
 	constructor(cbs: any) {
 		this.cbs = cbs ?? {};
-		this.context = { hrefs: [] };
+		this.context = { sites: [] };
 	}
 
 	onattribute(name: string, value: string, quote?: string | undefined | null) {
 		switch (name) {
 			case 'href':
-				this.context.hrefs.push(value);
+				this.context.sites.push(value);
 				break;
 		}
 		this.cbs.onattribute?.(name, value, quote);

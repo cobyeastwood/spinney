@@ -8,14 +8,14 @@ import { Options } from './types';
 import { MAX_RETRIES, RegularExpression } from './constants';
 import { ParseText, ParseXML } from './Parse';
 
-import WritableStreamHandler from './WritableStreamHandler';
+import WritableStreamHandler, { Handler } from './WritableStreamHandler';
 import StringWriter from './utils/StringWriter';
 import CommonError from './utils/CommonError';
 import Not from './utils/Not';
 
 export default class Spinney extends Observable<any> {
 	public subscribe: any;
-	private cbs: any;
+	private handler: any;
 	private axiosInstance: Axios;
 	private isOverideOn: boolean;
 	private isProcessing: boolean;
@@ -31,7 +31,6 @@ export default class Spinney extends Observable<any> {
 			this.setUp();
 		});
 
-		this.cbs = options?.cbs ?? {};
 		this.axiosInstance = axios.create(
 			Object.assign(config || {}, { responseType: 'stream' })
 		);
@@ -220,6 +219,10 @@ export default class Spinney extends Observable<any> {
 		return false;
 	}
 
+	configure(cbs: Handler) {
+		this.handler = new WritableStreamHandler(cbs);
+	}
+
 	async httpXMLOrDocument(href: string): Promise<any> {
 		let retryAttempts = 0;
 
@@ -258,12 +261,12 @@ export default class Spinney extends Observable<any> {
 						);
 					}
 
-					const handler = new WritableStreamHandler(this.cbs);
-
 					return new Promise(resolve =>
-						data.pipe(new WritableStream(handler)).on('finish', () => {
-							this.subscriber.next(handler.context);
-							resolve(this.getApprovedURL(handler.context.hrefs));
+						data.pipe(new WritableStream(this.handler)).on('finish', () => {
+							const { hrefs } = this.handler.context;
+							this.subscriber.next(href);
+							// add extend subscriber with callbacks
+							resolve(this.getApprovedURL(hrefs));
 						})
 					);
 				} catch (error: any) {

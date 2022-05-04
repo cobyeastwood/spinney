@@ -11,9 +11,11 @@ const Spinney = require('spinney');
 const spinney = new Spinney('https://google.com/');
 
 // Subscribe
-const subscription = spinney.subscribe({
-	next({ href, nodes }) {
-		console.log(href, nodes);
+const observable = spinney.configure({});
+
+observable.subscribe({
+	next(href) {
+		console.log(href);
 	},
 	error(error) {
 		console.log(error);

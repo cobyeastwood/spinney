@@ -8,12 +8,14 @@ import { Context, Options } from './types';
 import { MAX_RETRIES, RegularExpression } from './constants';
 import { ParseText, ParseXML } from './Parse';
 
+import WritableStreamHandler from './WritableStreamHandler';
 import StringWriter from './utils/StringWriter';
 import CommonError from './utils/CommonError';
 import Not from './utils/Not';
-import ExistNot from './utils/ExistNot';
 
-export default class Spinney {
+export default class Spinney extends Observable<any> {
+	public subscribe: any;
+	private cbs: any;
 	private axiosInstance: Axios;
 	private isOverideOn: boolean;
 	private isProcessing: boolean;
@@ -24,6 +26,12 @@ export default class Spinney {
 	private subscriber: any;
 
 	constructor(href: string, options?: Options, config?: AxiosRequestConfig) {
+		super((subscriber: any) => {
+			this.subscriber = subscriber;
+			this.setUp();
+		});
+
+		this.cbs = options?.cbs ?? {};
 		this.axiosInstance = axios.create(config || { responseType: 'stream' });
 		this.isOverideOn = !!options?.overide;
 		this.isProcessing = false;
@@ -49,19 +57,23 @@ export default class Spinney {
 		}
 	}
 
-	private async setUp(): Promise<void> {
+	private setUp() {
 		try {
-			const context = await this.httpText('/robots.txt');
+			this.httpText('/robots.txt').then(context => {
+				this.setForbidden(context);
+				this.resume();
 
-			this.setForbidden(context);
-			this.resume();
+				const hrefs = Array(
+					context.isSiteMap ? context.site : this.decodeURL.origin
+				);
 
-			const hrefs = Array(
-				context.isSiteMap ? context.site : this.decodeURL.origin
-			);
-
-			await this._setUp(hrefs);
+				this._setUp(hrefs);
+			});
 		} catch {}
+
+		return () => {
+			this.pause();
+		};
 	}
 
 	setForbidden({ forbidden }: { forbidden: Set<string> }) {
@@ -85,22 +97,6 @@ export default class Spinney {
 
 	isEmpty(data: any): boolean {
 		return Not(Array.isArray(data)) || data.length === 0;
-	}
-
-	spin(keys: string | string[]): Observable<any> {
-		if (ExistNot(keys)) {
-			throw new CommonError(this.spin, keys);
-		}
-
-		return new Observable(subscriber => {
-			this.subscriber = subscriber;
-
-			this.setUp();
-
-			return () => {
-				this.pause();
-			};
-		});
 	}
 
 	getRegExp(pathname: string): RegExp {
@@ -158,7 +154,7 @@ export default class Spinney {
 		return pathname;
 	}
 
-	isOrigin(href: string): boolean {
+	isApproved(href: string): boolean {
 		try {
 			const decodeURL = new URL(href);
 
@@ -174,17 +170,17 @@ export default class Spinney {
 		return false;
 	}
 
-	getOriginURL(hrefs: string[]): any[] {
-		const originURLs = [];
+	getApprovedURL(hrefs: string[]): any[] {
+		const approved = [];
 
 		for (const href of hrefs) {
 			const URL = this.getURL(href);
-			if (URL && this.isOrigin(URL)) {
-				originURLs.push(URL);
+			if (URL && this.isApproved(URL)) {
+				approved.push(URL);
 			}
 		}
 
-		return originURLs;
+		return approved;
 	}
 
 	async httpText(pathname: string): Promise<any> {
@@ -265,26 +261,12 @@ export default class Spinney {
 						);
 					}
 
-					const writeStream = new WritableStream({
-						onattribute(name, value) {
-							switch (name) {
-								case 'href':
-									hrefs.push(value);
-									break;
-							}
-						},
-						ontext(text) {
-							nodes.push(text);
-						},
-						onend() {
-							context.nodes = nodes;
-						},
-					});
+					const handler = new WritableStreamHandler(this.cbs);
 
 					return new Promise(resolve =>
-						data.pipe(writeStream).on('finish', () => {
+						data.pipe(new WritableStream(handler)).on('finish', () => {
 							this.subscriber.next(context);
-							resolve(this.getOriginURL(hrefs));
+							resolve(this.getApprovedURL(hrefs));
 						})
 					);
 				} catch (error: any) {

@@ -7,16 +7,13 @@ An efficient and flexible web scraper.
 ```javascript
 const Spinney = require('spinney');
 
-// Register an endpoint to scrape
+// Set an endpoint
 const spinney = new Spinney('https://google.com/');
 
-// Begin process on provided keys
-const observable = spinney.spin(['foo', 'bar']);
-
-// Subscribe to key changes
-const subscription = observable.subscribe({
-	next(elements) {
-		console.log(elements);
+// Subscribe
+const subscription = spinney.subscribe({
+	next({ href, nodes }) {
+		console.log(href, nodes);
 	},
 	error(error) {
 		console.log(error);
@@ -26,6 +23,6 @@ const subscription = observable.subscribe({
 	},
 });
 
-// Unsubscribe to key changes
+// Unsubscribe
 subscription.unsubscribe();
 ```

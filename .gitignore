@@ -2,4 +2,4 @@
 *lib*
 test*
 index.*
-.DS_Store
+*.DS_Store*

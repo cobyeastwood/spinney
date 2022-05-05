@@ -65,7 +65,7 @@ export default class Spinney extends Observable<any> {
 				.filter(Boolean)
 				.map(this.httpXMLOrDocument.bind(this));
 
-			while (sites.length) {
+			while (promises.length) {
 				const sitesBatch = await Promise.all(promises.splice(0, 4));
 				await this._setUp(sitesBatch.flat(1));
 			}

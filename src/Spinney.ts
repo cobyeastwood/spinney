@@ -61,10 +61,14 @@ export default class Spinney extends Observable<any> {
 		}
 
 		if (this.isProcessing) {
-			const sitesBatch = await Promise.all(
-				sites.filter(Boolean).map(this.httpXMLOrDocument.bind(this))
-			);
-			await this._setUp(sitesBatch.flat(1));
+			const promises = sites
+				.filter(Boolean)
+				.map(this.httpXMLOrDocument.bind(this));
+
+			while (sites.length) {
+				const sitesBatch = await Promise.all(promises.splice(0, 4));
+				await this._setUp(sitesBatch.flat(1));
+			}
 		}
 	}
 
@@ -281,6 +285,7 @@ export default class Spinney extends Observable<any> {
 					});
 				} catch (error: any) {
 					if (retries >= MAX_RETRIES) {
+						this.debug ?? debug(retry.name, error);
 						throw error;
 					}
 
@@ -297,7 +302,6 @@ export default class Spinney extends Observable<any> {
 						}
 					} else {
 						this.debug ?? debug(retry.name, error);
-
 						throw error;
 					}
 				}

@@ -31,7 +31,7 @@ export default class Spinney extends Observable<any> {
 		});
 
 		this.axiosInstance = axios.create(
-			Object.assign({ responseType: 'stream' }, config || {})
+			Object.assign({ responseType: 'stream' }, config ?? {})
 		);
 		this.isOverideOn = !!options?.overide;
 		this.isProcessing = false;
@@ -42,13 +42,7 @@ export default class Spinney extends Observable<any> {
 	}
 
 	override subscribe(options: any): Subscription {
-		const noop = () => {};
-		const {
-			next = noop,
-			error = noop,
-			complete = noop,
-			...cbs
-		} = options || {};
+		const { next, error, complete, ...cbs } = options ?? {};
 		this.handler = new WritableStreamHandler(cbs);
 		return super.subscribe({ next, error, complete });
 	}
@@ -167,7 +161,7 @@ export default class Spinney extends Observable<any> {
 		return pathname;
 	}
 
-	isApproved(site: string): boolean {
+	isApprovedURL(site: string): boolean {
 		try {
 			const decodeURL = new URL(site);
 
@@ -184,7 +178,7 @@ export default class Spinney extends Observable<any> {
 	}
 
 	getApprovedURL(hrefs: string[]): string[] {
-		return hrefs.map(this.getURL).filter(url => url && this.isApproved(url));
+		return hrefs.map(this.getURL).filter(this.isApprovedURL);
 	}
 
 	async httpText(pathname: string): Promise<any> {
@@ -198,7 +192,9 @@ export default class Spinney extends Observable<any> {
 			const parse = new ParseText();
 
 			await new Promise(resolve => {
-				resp.data.on('data', parse.write).on('end', resolve);
+				resp.data
+					.on('data', (chunk: Buffer) => parse.write(chunk))
+					.on('end', resolve);
 			});
 
 			return parse.end();

@@ -5,7 +5,7 @@ export default class StringWriter {
 	decode: StringDecoder;
 
 	constructor() {
-		this.string = new String();
+		this.string = String();
 		this.decode = new StringDecoder();
 	}
 

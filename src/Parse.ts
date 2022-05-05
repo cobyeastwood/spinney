@@ -9,6 +9,10 @@ export class ParseXML {
 		this.sites = [];
 	}
 
+	reset() {
+		Object.assign(this, new ParseXML());
+	}
+
 	async write(data: any, options = {}): Promise<void> {
 		try {
 			const raw = await parseStringPromise(data, options);
@@ -32,7 +36,7 @@ export class ParseXML {
 	end() {
 		const endOutput = this.sites;
 
-		Object.assign(this, new ParseXML());
+		this.reset();
 
 		return endOutput;
 	}
@@ -49,6 +53,10 @@ export class ParseText {
 		this.forbidden = new Set();
 		this.isSiteMap = false;
 		this.isParsing = false;
+	}
+
+	reset() {
+		Object.assign(this, new ParseText());
 	}
 
 	onSiteMap(line: string): void {
@@ -84,12 +92,10 @@ export class ParseText {
 	}
 
 	write(chunk: Buffer): void {
-		const newLines = new String(chunk).split(RegExps.NewLine);
-
-		for (const newLine of newLines) {
-			this.onSiteMap(newLine);
-			this.onUserAgent(newLine);
-			this.onDisallow(newLine);
+		for (const line of String(chunk).split(RegExps.NewLine)) {
+			this.onSiteMap(line);
+			this.onUserAgent(line);
+			this.onDisallow(line);
 		}
 	}
 
@@ -100,7 +106,7 @@ export class ParseText {
 			isSiteMap: this.isSiteMap,
 		};
 
-		Object.assign(this, new ParseText());
+		this.reset();
 
 		return endOutput;
 	}

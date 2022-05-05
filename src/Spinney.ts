@@ -13,9 +13,14 @@ import CommonError from './utils/CommonError';
 import Not from './utils/Not';
 import { Observable, Subscription } from 'rxjs';
 
+function debug(message: string, error?: Error): void {
+	console.error(message, error);
+}
+
 export default class Spinney extends Observable<any> {
 	private handler: any;
 	private axiosInstance: Axios;
+	private debug: boolean;
 	private isOverideOn: boolean;
 	private isProcessing: boolean;
 	private forbidden: Set<string>;
@@ -33,6 +38,7 @@ export default class Spinney extends Observable<any> {
 		this.axiosInstance = axios.create(
 			Object.assign({ responseType: 'stream' }, config ?? {})
 		);
+		this.debug = !!options?.debug;
 		this.isOverideOn = !!options?.overide;
 		this.isProcessing = false;
 		this.forbidden = new Set();
@@ -56,7 +62,7 @@ export default class Spinney extends Observable<any> {
 
 		if (this.isProcessing) {
 			const sitesBatch = await Promise.all(
-				sites.filter(Boolean).map(this.httpXMLOrDocument)
+				sites.filter(Boolean).map(this.httpXMLOrDocument.bind(this))
 			);
 			await this._setUp(sitesBatch.flat(1));
 		}
@@ -74,7 +80,9 @@ export default class Spinney extends Observable<any> {
 
 				this._setUp(sites);
 			});
-		} catch {}
+		} catch (error) {
+			this.debug ?? debug(this.setUp.name, error as any);
+		}
 
 		return () => {
 			this.pause();
@@ -104,12 +112,14 @@ export default class Spinney extends Observable<any> {
 		if (RegExps.ForwardSlashWord.test(testPathname)) {
 			const index = testPathname.indexOf('/');
 			const hostname = this.decodeURL.hostname;
+
 			if (Not(index === -1)) {
 				const pathname = testPathname.slice(index);
 				return RegExps.getHostnameAndPathname(hostname, pathname).test(
 					basePathname
 				);
 			}
+
 			return RegExps.getHostnameAndPathname(hostname, testPathname).test(
 				basePathname
 			);
@@ -149,7 +159,7 @@ export default class Spinney extends Observable<any> {
 		}
 
 		if (pathname.startsWith('/')) {
-			const newURL = new URL(this.site, this.decodeURL);
+			const newURL = new URL(this.site);
 			if (pathname.charAt(1) === '/') {
 				newURL.pathname = pathname.slice(1);
 			} else {
@@ -161,7 +171,7 @@ export default class Spinney extends Observable<any> {
 		return pathname;
 	}
 
-	isApprovedURL(site: string): boolean {
+	isApproved(site: string): boolean {
 		try {
 			const decodeURL = new URL(site);
 
@@ -172,13 +182,15 @@ export default class Spinney extends Observable<any> {
 			if (decodeURL.origin.startsWith(this.decodeURL.origin)) {
 				return this.isForbidden(decodeURL.toString());
 			}
-		} catch {}
+		} catch (error) {
+			this.debug ?? debug(this.isApproved.name, error as any);
+		}
 
 		return false;
 	}
 
-	getApprovedURL(hrefs: string[]): string[] {
-		return hrefs.map(this.getURL).filter(this.isApprovedURL);
+	getApproved(hrefs: string[]): string[] {
+		return hrefs.map(this.getURL.bind(this)).filter(this.isApproved.bind(this));
 	}
 
 	async httpText(pathname: string): Promise<any> {
@@ -191,14 +203,17 @@ export default class Spinney extends Observable<any> {
 
 			const parse = new ParseText();
 
-			await new Promise(resolve => {
+			await new Promise((resolve, reject) => {
 				resp.data
 					.on('data', (chunk: Buffer) => parse.write(chunk))
-					.on('end', resolve);
+					.on('end', resolve)
+					.on('error', reject);
 			});
 
 			return parse.end();
 		} catch (error) {
+			this.debug ?? debug(this.httpText.name, error as any);
+
 			this.subscriber.error(error);
 			this.pause();
 		}
@@ -232,7 +247,7 @@ export default class Spinney extends Observable<any> {
 
 					if (this.isHeaderXML(headers)) {
 						const writer = new StringWriter();
-						return new Promise(resolve => {
+						return new Promise((resolve, reject) => {
 							data
 								.pipe(
 									new Writable({
@@ -249,16 +264,20 @@ export default class Spinney extends Observable<any> {
 									const parse = new ParseXML();
 									await parse.write(writer.string);
 									return resolve(parse.end());
-								});
+								})
+								.on('error', reject);
 						});
 					}
 
-					return new Promise(resolve => {
-						data.pipe(new WritableStream(this.handler)).on('finish', () => {
-							const sites = this.handler.context.sites;
-							this.subscriber.next(site);
-							resolve(this.getApprovedURL(sites));
-						});
+					return new Promise((resolve, reject) => {
+						data
+							.pipe(new WritableStream(this.handler))
+							.on('finish', () => {
+								const sites = this.handler.context.sites;
+								this.subscriber.next(site);
+								resolve(this.getApproved(sites));
+							})
+							.on('error', reject);
 					});
 				} catch (error: any) {
 					if (retries >= MAX_RETRIES) {
@@ -277,6 +296,8 @@ export default class Spinney extends Observable<any> {
 								return await retry();
 						}
 					} else {
+						this.debug ?? debug(retry.name, error);
+
 						throw error;
 					}
 				}
@@ -284,6 +305,8 @@ export default class Spinney extends Observable<any> {
 
 			return await retry();
 		} catch (error) {
+			this.debug ?? debug(this.httpXMLOrDocument.name, error as any);
+
 			this.subscriber.error(error);
 			this.pause();
 		}

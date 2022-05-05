@@ -30,7 +30,9 @@ export class ParseXML {
 					}
 				}
 			}
-		} catch {}
+		} catch (error) {
+			throw error;
+		}
 	}
 
 	end() {

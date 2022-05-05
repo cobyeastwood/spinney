@@ -285,7 +285,6 @@ export default class Spinney extends Observable<any> {
 					});
 				} catch (error: any) {
 					if (retries >= MAX_RETRIES) {
-						this.debug ?? debug(retry.name, error);
 						throw error;
 					}
 
@@ -301,7 +300,6 @@ export default class Spinney extends Observable<any> {
 								return await retry();
 						}
 					} else {
-						this.debug ?? debug(retry.name, error);
 						throw error;
 					}
 				}

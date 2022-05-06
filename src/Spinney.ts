@@ -2,6 +2,7 @@ import axios, { Axios, AxiosRequestConfig, AxiosResponseHeaders } from 'axios';
 
 import { Writable } from 'stream';
 import { WritableStream } from 'htmlparser2/lib/WritableStream';
+import { Observable, Subscription } from 'rxjs';
 
 import { Options } from './types';
 import { MAX_RETRIES, RegExps } from './constants';
@@ -9,19 +10,19 @@ import { ParseText, ParseXML } from './Parse';
 
 import WritableStreamHandler from './WritableStreamHandler';
 import StringWriter from './utils/StringWriter';
-import CommonError from './utils/CommonError';
 import Not from './utils/Not';
-import { Observable, Subscription } from 'rxjs';
 
-function debug(message: string, error?: Error): void {
-	console.error(message, error);
-}
+const noop = () => {};
+
+const debug = (error?: Error): void => {
+	console.error(error?.message);
+};
 
 export default class Spinney extends Observable<any> {
 	private handler: any;
 	private axiosInstance: Axios;
-	private debug: boolean;
-	private isOverideOn: boolean;
+	private debug: (error?: Error) => void;
+	private isOveride: boolean;
 	private isProcessing: boolean;
 	private forbidden: Set<string>;
 	private site: string;
@@ -38,8 +39,8 @@ export default class Spinney extends Observable<any> {
 		this.axiosInstance = axios.create(
 			Object.assign({ responseType: 'stream' }, config ?? {})
 		);
-		this.debug = !!options?.debug;
-		this.isOverideOn = !!options?.overide;
+		this.debug = options?.debug ? debug : noop;
+		this.isOveride = !!options?.overide;
 		this.isProcessing = false;
 		this.forbidden = new Set();
 		this.seen = new Set();
@@ -54,21 +55,30 @@ export default class Spinney extends Observable<any> {
 	}
 
 	private async _setUp(sites: string[]): Promise<void> {
-		if (this.isArrayEmpty(sites)) {
-			this.subscriber.complete();
-			this.pause();
-			return;
-		}
-
-		if (this.isProcessing) {
-			const promises = sites
-				.filter(Boolean)
-				.map(this.httpXMLOrDocument.bind(this));
-
-			while (promises.length) {
-				const sitesBatch = await Promise.all(promises.splice(0, 4));
-				await this._setUp(sitesBatch.flat(1));
+		try {
+			if (this.isArrayEmpty(sites)) {
+				this.subscriber.complete();
+				this.pause();
+				return;
 			}
+
+			if (this.isProcessing) {
+				if (Not(this.axiosInstance.defaults.timeout === 0)) {
+					this.axiosInstance.defaults.timeout = 0;
+				}
+
+				const promises = sites
+					.filter(Boolean)
+					.map(this.httpXMLOrDocument.bind(this));
+
+				while (promises.length) {
+					const sitesBatch = await Promise.all(promises.splice(0, 4));
+					await this._setUp(sitesBatch.flat(1));
+				}
+			}
+		} catch (error) {
+			this.debug?.(error as any);
+			this.subscriber.error(error);
 		}
 	}
 
@@ -85,7 +95,8 @@ export default class Spinney extends Observable<any> {
 				this._setUp(sites);
 			});
 		} catch (error) {
-			this.debug ?? debug(this.setUp.name, error as any);
+			this.debug?.(error as any);
+			this.subscriber.error(error);
 		}
 
 		return () => {
@@ -131,8 +142,12 @@ export default class Spinney extends Observable<any> {
 		return false;
 	}
 
+	setForbidden({ forbidden }: { forbidden: Set<string> }) {
+		this.forbidden = forbidden;
+	}
+
 	_isForbidden(href: string): boolean {
-		if (this.isOverideOn) {
+		if (this.isOveride) {
 			return true;
 		}
 
@@ -153,13 +168,9 @@ export default class Spinney extends Observable<any> {
 		return false;
 	}
 
-	setForbidden({ forbidden }: { forbidden: Set<string> }) {
-		this.forbidden = forbidden;
-	}
-
 	getURL(pathname: string): string {
 		if (Not(typeof pathname === 'string')) {
-			throw new CommonError(this.getURL, pathname);
+			throw new TypeError('pathname is not type string');
 		}
 
 		if (pathname.startsWith('/')) {
@@ -177,17 +188,20 @@ export default class Spinney extends Observable<any> {
 
 	isApproved(site: string): boolean {
 		try {
-			const decodeURL = new URL(site);
+			if (RegExps.getURL().test(site)) {
+				const decodeURL = new URL(site);
 
-			if (decodeURL.hostname.startsWith(this.decodeURL.hostname)) {
-				return this.isForbidden(decodeURL.toString());
-			}
+				if (decodeURL.hostname.startsWith(this.decodeURL.hostname)) {
+					return this.isForbidden(decodeURL.toString());
+				}
 
-			if (decodeURL.origin.startsWith(this.decodeURL.origin)) {
-				return this.isForbidden(decodeURL.toString());
+				if (decodeURL.origin.startsWith(this.decodeURL.origin)) {
+					return this.isForbidden(decodeURL.toString());
+				}
 			}
 		} catch (error) {
-			this.debug ?? debug(this.isApproved.name, error as any);
+			this.debug?.(error as any);
+			this.subscriber.error(error);
 		}
 
 		return false;
@@ -199,25 +213,25 @@ export default class Spinney extends Observable<any> {
 
 	async httpText(pathname: string): Promise<any> {
 		try {
-			const resp = await this.axiosInstance.get(this.getURL(pathname));
+			const { data, status } = await this.axiosInstance.get(
+				this.getURL(pathname)
+			);
 
-			if (Not(resp.status === 200)) {
-				return Promise.reject(new CommonError(this.httpText, resp.status));
+			if (Not(status === 200)) {
+				return new Error('status code' + status);
 			}
 
 			const parse = new ParseText();
 
-			await new Promise((resolve, reject) => {
-				resp.data
+			await new Promise(resolve => {
+				data
 					.on('data', (chunk: Buffer) => parse.write(chunk))
-					.on('end', resolve)
-					.on('error', reject);
+					.on('end', resolve);
 			});
 
 			return parse.end();
 		} catch (error) {
-			this.debug ?? debug(this.httpText.name, error as any);
-
+			this.debug?.(error as any);
 			this.subscriber.error(error);
 			this.pause();
 		}
@@ -246,7 +260,7 @@ export default class Spinney extends Observable<any> {
 					const { data, headers, status } = await this.axiosInstance.get(site);
 
 					if (Not(status === 200)) {
-						throw new Error();
+						throw new Error('status code' + status);
 					}
 
 					if (this.isHeaderXML(headers)) {
@@ -265,27 +279,27 @@ export default class Spinney extends Observable<any> {
 									})
 								)
 								.on('finish', async () => {
-									const parse = new ParseXML();
-									await parse.write(writer.string);
-									return resolve(parse.end());
-								})
-								.on('error', reject);
+									try {
+										const parse = new ParseXML();
+										await parse.write(writer.string);
+										resolve(parse.end());
+									} catch (error) {
+										reject(error);
+									}
+								});
 						});
 					}
 
-					return new Promise((resolve, reject) => {
-						data
-							.pipe(new WritableStream(this.handler))
-							.on('finish', () => {
-								const sites = this.handler.context.sites;
-								this.subscriber.next(site);
-								resolve(this.getApproved(sites));
-							})
-							.on('error', reject);
+					return new Promise(resolve => {
+						data.pipe(new WritableStream(this.handler)).on('finish', () => {
+							const sites = this.handler.context.sites;
+							this.subscriber.next(site);
+							resolve(this.getApproved(sites));
+						});
 					});
 				} catch (error: any) {
 					if (retries >= MAX_RETRIES) {
-						throw error;
+						throw new Error('retries reached maximum' + retries);
 					}
 
 					if (error?.response?.status) {
@@ -294,9 +308,7 @@ export default class Spinney extends Observable<any> {
 								return;
 							default:
 								retries++;
-								await new Promise(resolve => {
-									setTimeout(resolve, 500);
-								});
+								this.axiosInstance.defaults.timeout = (retries * 1000) / 4;
 								return await retry();
 						}
 					} else {
@@ -307,8 +319,7 @@ export default class Spinney extends Observable<any> {
 
 			return await retry();
 		} catch (error) {
-			this.debug ?? debug(this.httpXMLOrDocument.name, error as any);
-
+			this.debug?.(error as any);
 			this.subscriber.error(error);
 			this.pause();
 		}

@@ -4,13 +4,14 @@ import { Writable } from 'stream';
 import { WritableStream } from 'htmlparser2/lib/WritableStream';
 import { Observable, Subscription } from 'rxjs';
 
-import { Options } from './types';
-import { MAX_RETRIES, RegExps } from './constants';
-import { ParseText, ParseXML } from './Parse';
-
+import ParseXML from './ParseXML';
+import ParseText from './ParseText';
 import WritableStreamHandler from './WritableStreamHandler';
 import StringWriter from './utils/StringWriter';
 import Not from './utils/Not';
+
+import { MAX_RETRIES, RegExps } from './constants';
+import { Options } from './types';
 
 const noop = () => {};
 

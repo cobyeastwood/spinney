@@ -12,6 +12,13 @@ export default class ParseText {
 		this.forbidden = new Set();
 		this.isSiteMap = false;
 		this.isParsing = false;
+
+		this.reset = this.reset.bind(this);
+		this.onSiteMap = this.onSiteMap.bind(this);
+		this.onUserAgent = this.onUserAgent.bind(this);
+		this.onDisallow = this.onDisallow.bind(this);
+		this.write = this.write.bind(this);
+		this.end = this.end.bind(this);
 	}
 
 	reset() {

@@ -1,13 +1,11 @@
 import axios, { Axios, AxiosRequestConfig, AxiosResponseHeaders } from 'axios';
 
-import { Writable } from 'stream';
 import { WritableStream } from 'htmlparser2/lib/WritableStream';
 import { Observable, Subscription } from 'rxjs';
 
 import ParseXML from './ParseXML';
 import ParseText from './ParseText';
-import WritableStreamHandler from './WritableStreamHandler';
-import StringWriter from './utils/StringWriter';
+import StringWritable from './StringWritable';
 import Not from './utils/Not';
 
 import { MAX_RETRIES, RegExps } from './constants';
@@ -20,7 +18,7 @@ const debug = (error?: Error): void => {
 };
 
 export default class Spinney extends Observable<any> {
-	private handler: any;
+	private cbs: any;
 	private axiosInstance: Axios;
 	private debug: (error?: Error) => void;
 	private isOveride: boolean;
@@ -37,21 +35,23 @@ export default class Spinney extends Observable<any> {
 			this.setUp();
 		});
 
-		this.axiosInstance = axios.create(
-			Object.assign({ responseType: 'stream' }, config ?? {})
-		);
+		this.cbs = {};
 		this.debug = options?.debug ? debug : noop;
-		this.isOveride = !!options?.overide;
+		this.isOveride = options?.overide ?? false;
 		this.isProcessing = false;
 		this.forbidden = new Set();
 		this.seen = new Set();
 		this.site = site;
 		this.decodeURL = new URL(site);
+
+		this.axiosInstance = axios.create(
+			Object.assign({ responseType: 'stream' }, config ?? {})
+		);
 	}
 
 	override subscribe(options: any): Subscription {
 		const { next, error, complete, ...cbs } = options ?? {};
-		this.handler = new WritableStreamHandler(cbs);
+		Object.assign(this.cbs, cbs);
 		return super.subscribe({ next, error, complete });
 	}
 
@@ -225,9 +225,7 @@ export default class Spinney extends Observable<any> {
 			const parse = new ParseText();
 
 			await new Promise(resolve => {
-				data
-					.on('data', (chunk: Buffer) => parse.write(chunk))
-					.on('end', resolve);
+				data.on('data', parse.write).on('end', resolve);
 			});
 
 			return parse.end();
@@ -265,37 +263,37 @@ export default class Spinney extends Observable<any> {
 					}
 
 					if (this.isHeaderXML(headers)) {
-						const writer = new StringWriter();
+						const writable = new StringWritable();
+						const parse = new ParseXML();
 						return new Promise((resolve, reject) => {
-							data
-								.pipe(
-									new Writable({
-										write(chunk, encoding) {
-											writer.write(chunk, encoding);
-										},
-										final(cb) {
-											writer.final();
-											cb();
-										},
-									})
-								)
-								.on('finish', async () => {
-									try {
-										const parse = new ParseXML();
-										await parse.write(writer.string);
-										resolve(parse.end());
-									} catch (error) {
-										reject(error);
-									}
-								});
+							data.pipe(writable).on('finish', async () => {
+								try {
+									const { sites } = await parse.promise(writable.string);
+									resolve(sites);
+								} catch (error) {
+									reject(error);
+								}
+							});
 						});
 					}
 
 					return new Promise(resolve => {
-						data.pipe(new WritableStream(this.handler)).on('finish', () => {
-							const sites = this.handler.context.sites;
+						const { onattribute, ...rest } = this.cbs;
+
+						const context = { sites: [] } as any;
+						const handler = {
+							...rest,
+							onattribute: (name: string, value: string, quote?: string) => {
+								if (name === 'href') {
+									context.sites.push(value);
+								}
+								onattribute?.(name, value, quote);
+							},
+						};
+
+						data.pipe(new WritableStream(handler)).on('finish', () => {
 							this.subscriber.next(site);
-							resolve(this.getApproved(sites));
+							resolve(this.getApproved(context.sites));
 						});
 					});
 				} catch (error: any) {
@@ -306,7 +304,7 @@ export default class Spinney extends Observable<any> {
 					if (error?.response?.status) {
 						switch (error.response.status) {
 							case 404:
-								return;
+								return Promise.resolve();
 							default:
 								retries++;
 								this.axiosInstance.defaults.timeout = (retries * 1000) / 4;

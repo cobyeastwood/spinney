@@ -219,7 +219,7 @@ export default class Spinney extends Observable<any> {
 			);
 
 			if (Not(status === 200)) {
-				return new Error('status code' + status);
+				throw new Error('status code' + status);
 			}
 
 			const parse = new ParseText();

@@ -224,15 +224,14 @@ export default class Spinney extends Observable<any> {
 
 			const parse = new ParseText();
 
-			await new Promise(resolve => {
-				data.on('data', parse.write).on('end', resolve);
-			});
+			await new Promise(resolve =>
+				data.on('data', parse.write).on('end', resolve)
+			);
 
 			return parse.end();
 		} catch (error) {
 			this.debug?.(error as any);
 			this.subscriber.error(error);
-			this.pause();
 		}
 	}
 
@@ -268,8 +267,9 @@ export default class Spinney extends Observable<any> {
 						return new Promise((resolve, reject) => {
 							data.pipe(writable).on('finish', async () => {
 								try {
-									const { sites } = await parse.promise(writable.string);
-									resolve(sites);
+									await parse
+										.promise(writable.string)
+										.then(({ sites }) => resolve(sites));
 								} catch (error) {
 									reject(error);
 								}

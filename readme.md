@@ -1,13 +1,6 @@
-## Spinney
-
-An efficient and flexible web scraper.
-
-### Basic Example
+### Example
 
 ```javascript
-const Spinney = require('spinney');
-
-// Set base endpoint
 const spinney = new Spinney('http://example.com/');
 
 // Subscribe custom handlers

@@ -1,9 +1,10 @@
 ### Example
 
 ```javascript
+// Setup the scraper
 const spinney = new Spinney('http://example.com/');
 
-// Subscribe custom handlers
+// Subscribe to custom handlers
 const subscription = spinney.subscribe({
 	next(site) {
 		console.log(site);
